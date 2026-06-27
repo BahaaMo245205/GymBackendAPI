@@ -1,0 +1,20 @@
+[project]
+name = "gymbackendapi"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "alembic>=1.18.5",
+    "fastapi[standard]>=0.138.1",
+    "gunicorn>=26.0.0",
+    "imagekitio[aiohttp]>=5.7.0",
+    "mysql>=0.0.3",
+    "passlib[bcrypt]>=1.7.4",
+    "pymysql>=1.2.0",
+    "python-dotenv>=1.2.2",
+    "python-jose[cryptography]>=3.5.0",
+    "redis>=8.0.1",
+    "sqlalchemy>=2.0.51",
+]

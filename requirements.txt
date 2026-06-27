@@ -1,0 +1,13 @@
+aiosqlite
+alembic
+fastapi[standard]
+Gunicorn
+imagekitio
+imagekitio[aiohttp]
+mysql
+passlib[bcrypt]
+pymysql
+python-dotenv
+python-jose[cryptography]
+redis
+SQLAlchemy
