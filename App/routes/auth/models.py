@@ -1,22 +1,40 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import Union
+from pydantic import BaseModel, Field, EmailStr, model_validator
+from typing import Self
 
 
-class Register(BaseModel):
-    username: Union[str, None] = Field(..., min_length=4)
-    email: Union[str, EmailStr]
-    password: Union[str] = Field(..., min_length=8)
+class RegisterSchema(BaseModel):
+    username: str = Field(..., min_length=4, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
+
+    @model_validator(mode="after")
+    def verify_passwords_match(self) -> Self:
+        if self.password != self.confirm_password:
+            raise ValueError("🚨 Passwords do not match!")
+        return self
 
 
-class login(BaseModel):
-    email: Union[str, None]
-    password: Union[str, None]
-
-
-class ForgotPassword(BaseModel):
+class RegisterSchemaOut(BaseModel):
+    username: str = Field(..., min_length=4, max_length=50)
     email: EmailStr
 
 
-class ResetPassword(BaseModel):
-    NewPassword: Union[str:None]
-    ConfirmPassword: Union[str:None]
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+
+class ForgotPasswordSchema(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordSchema(BaseModel):
+    new_password: str = Field(..., min_length=8)
+    confirm_password: str = Field(..., min_length=8)
+
+    @model_validator(mode="after")
+    def verify_new_passwords_match(self) -> Self:
+        if self.new_password != self.confirm_password:
+            raise ValueError("🚨 New passwords do not match!")
+        return self

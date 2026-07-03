@@ -5,8 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "aiomysql>=0.3.2",
     "aiosqlite>=0.22.1",
     "alembic>=1.18.5",
+    "bcrypt>=5.0.0",
     "fastapi[standard]>=0.138.1",
     "gunicorn>=26.0.0",
     "imagekitio[aiohttp]>=5.7.0",

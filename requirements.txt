@@ -11,3 +11,5 @@ python-dotenv
 python-jose[cryptography]
 redis
 SQLAlchemy
+aiomysql
+bcrypt

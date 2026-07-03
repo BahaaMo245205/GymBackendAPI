@@ -1,6 +1,14 @@
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
+from App.Database.db import create_db_and_table
 
-app = FastAPI(version="0.0.1", description="API System Gym", title="API System Gym")
+@asynccontextmanager
+async def lifespan (app:FastAPI):
+    await create_db_and_table()
+    yield
+    
+
+app = FastAPI(version="0.0.1", description="API System Gym", title="API System Gym",lifespan=lifespan)
 
 from App.routes.classes import classes_router
 
