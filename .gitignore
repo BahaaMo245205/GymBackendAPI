@@ -10,3 +10,4 @@ MarkDown/
 # Virtual environments
 .venv
 .env
+*.json

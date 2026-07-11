@@ -1,0 +1,29 @@
+<div class="login-container">
+    <div class="login-card">
+        <h2>أهلاً بك 👋</h2>
+        <p>سجل دخولك باستخدام حساب جوجل للمتابعة</p>
+        
+        <a href="http://localhost:8000/v1/api/auth/loginGoogle" class="google-btn">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google">
+            سجل الدخول باستخدام Google
+        </a>
+    </div>
+</div>
+
+<style>
+    body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    
+    .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+    
+    h2 { color: #333; margin-bottom: 10px; }
+    p { color: #666; margin-bottom: 30px; }
+
+    .google-btn {
+        display: flex; align-items: center; justify-content: center;
+        background-color: white; border: 2px solid #ddd; padding: 12px;
+        border-radius: 8px; text-decoration: none; color: #555;
+        font-weight: bold; transition: 0.3s;
+    }
+    .google-btn img { width: 20px; margin-right: 10px; }
+    .google-btn:hover { background-color: #f8f8f8; border-color: #4285F4; color: #4285F4; }
+</style>

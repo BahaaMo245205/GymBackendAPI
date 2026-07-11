@@ -3,7 +3,6 @@ from App.routes.auth.models import (
     LoginSchema,
     RegisterSchema,
     ResetPasswordSchema,
-    RegisterSchemaOut,
 )
 from App.routes.auth.helper import (
     generate_password_hash,
@@ -12,14 +11,21 @@ from App.routes.auth.helper import (
     verify_reset_token,
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from fastapi import APIRouter, Depends, HTTPException, status,Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from App.Database.db import get_async_session, Users
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.responses import HTMLResponse, RedirectResponse
 from dotenv import load_dotenv
 from sqlalchemy import select
+from urllib.parse import urlencode
+import httpx
 import os
 
+
 load_dotenv()
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = "http://localhost:8000/v1/api/auth/google/callback"
 
 auth_router = APIRouter(prefix="/v1/api/auth", tags=["Auth"])
 conf = ConnectionConfig(
@@ -28,10 +34,11 @@ conf = ConnectionConfig(
     MAIL_PORT=587,
     MAIL_FROM=os.getenv("MAIL_FROM"),
     MAIL_SERVER=os.getenv("MAIL_SERVER"),
-    MAIL_STARTTLS=True, 
-    MAIL_SSL_TLS=False,  
-    USE_CREDENTIALS=True
+    MAIL_STARTTLS=True,
+    MAIL_SSL_TLS=False,
+    USE_CREDENTIALS=True,
 )
+
 
 @auth_router.post("/login", status_code=status.HTTP_200_OK)
 async def login(
@@ -51,13 +58,11 @@ async def login(
     if not db_user:
         raise invalid_credentials_exception
 
-    # is_password_correct = validate_password(
-    #     hashed_password=db_user.password, password=login_user.password
-    # )
-
-    if not validate_password(
+    is_password_correct = validate_password(
         hashedPassword=db_user.password, password=login_user.password
-    ):
+    )
+
+    if not is_password_correct:
         raise invalid_credentials_exception
 
     return {
@@ -138,7 +143,7 @@ async def forgot_password(
 @auth_router.post("/reset-password")
 async def reset_password(
     data: ResetPasswordSchema,
-    token:str=Query(),
+    token: str = Query(),
     session: AsyncSession = Depends(get_async_session),
 ):
 
@@ -161,6 +166,84 @@ async def reset_password(
     return {"status": "success", "message": "تم تغيير كلمة المرور بنجاح يا برنس!"}
 
 
-@auth_router.post("/google/callback")
-def google_callback():
-    pass
+@auth_router.get("/loginGoogle")
+async def login_Google():
+    """This path for testing"""
+    query_params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+    }
+
+    url = f"{os.getenv("GOOGLE_AUTH_ENDPOINT")}?{urlencode(query_params)}"
+    return RedirectResponse(url)
+
+
+@auth_router.get("/google/callback")
+async def google_callback(
+    code: str, session: AsyncSession = Depends(get_async_session)
+):
+    if not code:
+        raise HTTPException(status_code=400, detail="🚨 الـ Authorization Code مفقود!")
+
+    token_url: str = "https://oauth2.googleapis.com/token"
+    token_data: dict = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+
+    async with httpx.AsyncClient() as client:
+        token_response = await client.post(token_url, data=token_data)
+        if token_response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="🚨 فشل التحقق من الكود مع سيرفرات جوجل",
+            )
+
+        tokens: dict = token_response.json()
+        access_token: str = tokens.get("access_token")
+
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+
+        user_info_response = await client.get(user_info_url, headers=headers)
+        if user_info_response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="🚨 فشل سحب بيانات المستخدم من جوجل",
+            )
+
+        google_user: dict = user_info_response.json()
+
+    email = google_user.get("email")
+    username = google_user.get("name")
+
+    query = select(Users).where(Users.email == email)
+    result = await session.execute(query)
+    db_user = result.scalar_one_or_none()
+
+    if not db_user:
+        random_password = generate_password_hash(os.urandom(16).hex())
+
+        db_user = Users(username=username, email=email, password=random_password)
+        try:
+            session.add(db_user)
+            await session.commit()
+            await session.refresh(db_user)
+        except Exception:
+            await session.rollback()
+            raise HTTPException(
+                status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
+            )
+
+    return {
+        "status": "success",
+        "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
+        "user": {"username": db_user.UserName, "email": db_user.email},
+    }
