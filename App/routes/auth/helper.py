@@ -1,8 +1,8 @@
 from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException
-from jose import jwt, JWTError
 from dotenv import load_dotenv
-from typing import Annotated,Union
+from jose import jwt, JWTError
+from typing import Annotated
 import hashlib
 import os
 
@@ -10,6 +10,7 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
 def generate_password_hash(password: Annotated[str, None]) -> str:
@@ -21,9 +22,7 @@ def generate_password_hash(password: Annotated[str, None]) -> str:
     return hash_password
 
 
-def validate_password(
-    hashedPassword:str, password:str
-) -> bool:
+def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
         raise HTTPException(501, "Error Chick password")
 
@@ -48,3 +47,24 @@ def verify_reset_token(token) -> str | None:
         return payload.get("sub")
     except JWTError:
         return None
+
+
+def create_access_token(data: dict) -> str | None:
+    
+    if not data:
+        return None
+
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    return encode_jwt
+
+def decode_jwt_token (token:str) -> bool | None :
+    try :
+        payload = jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+        return payload
+    except :
+        return None
+    

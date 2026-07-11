@@ -9,18 +9,19 @@ from App.routes.auth.helper import (
     validate_password,
     create_reset_token,
     verify_reset_token,
+    create_access_token,
+    decode_jwt_token,
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from App.Database.db import get_async_session, Users
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 from sqlalchemy import select
-from urllib.parse import urlencode
 import httpx
 import os
-
 
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -65,11 +66,16 @@ async def login(
     if not is_password_correct:
         raise invalid_credentials_exception
 
-    return {
-        "status": "success",
-        "message": "تم تسجيل الدخول بنجاح يا برنس!",
-        "username": db_user.UserName,
-    }
+    access_token = create_access_token(
+        data={"sub": {"Email": db_user.email, "UserName": db_user.UserName}}
+    )
+    if not access_token:
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error access token",
+        )
+
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @auth_router.post("/register", status_code=201)
