@@ -1,25 +1,29 @@
 from App.routes.auth.models import (
     ForgotPasswordSchema,
-    LoginSchema,
-    RegisterSchema,
     ResetPasswordSchema,
+    RegisterSchema,
+    LoginSchema,
 )
 from App.routes.auth.helper import (
     generate_password_hash,
-    validate_password,
+    create_access_token,
     create_reset_token,
     verify_reset_token,
-    create_access_token,
-    decode_jwt_token,
+    retrieve_client_ip,
+    validate_password,
+    get_current_user,
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+# from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from App.Database.db import get_async_session, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import RedirectResponse
+from fastapi.requests import Request
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 from sqlalchemy import select
+from typing import Annotated
 import httpx
 import os
 
@@ -27,6 +31,8 @@ load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = "http://localhost:8000/v1/api/auth/google/callback"
+
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 auth_router = APIRouter(prefix="/v1/api/auth", tags=["Auth"])
 conf = ConnectionConfig(
@@ -43,7 +49,9 @@ conf = ConnectionConfig(
 
 @auth_router.post("/login", status_code=status.HTTP_200_OK)
 async def login(
-    login_user: LoginSchema, session: AsyncSession = Depends(get_async_session)
+    login_user: LoginSchema,
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
 ):
     """تسجيل الدخول والتحقق من الهوية بأمان تام"""
 
@@ -66,8 +74,14 @@ async def login(
     if not is_password_correct:
         raise invalid_credentials_exception
 
-    access_token = create_access_token(
-        data={"sub": {"Email": db_user.email, "UserName": db_user.UserName}}
+    access_token, refresh_token = create_access_token(
+        data={
+            "sub": {
+                "Email": db_user.email,
+                "UserName": db_user.UserName,
+                "ip-address": retrieve_client_ip(request),
+            }
+        }
     )
     if not access_token:
         return HTTPException(
@@ -75,7 +89,11 @@ async def login(
             detail="Error access token",
         )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @auth_router.post("/register", status_code=201)
@@ -93,10 +111,10 @@ async def register(
                 status_code=400, detail="🚨 هذا البريد الإلكتروني مسجل بالفعل!"
             )
 
-        username = register.username
-        email = register.email
-        password = register.password
-        confirm_password = register.confirm_password
+        username = register.username.title().strip()
+        email = register.email.strip()
+        password = register.password.strip()
+        confirm_password = register.confirm_password.strip()
 
         if not username and not email and not password and not confirm_password:
             raise HTTPException(status_code=401, detail="Please input all data !")
@@ -190,7 +208,7 @@ async def login_Google():
 
 @auth_router.get("/google/callback")
 async def google_callback(
-    code: str, session: AsyncSession = Depends(get_async_session)
+    code: str, request: Request, session: AsyncSession = Depends(get_async_session)
 ):
     if not code:
         raise HTTPException(status_code=400, detail="🚨 الـ Authorization Code مفقود!")
@@ -227,17 +245,21 @@ async def google_callback(
 
         google_user: dict = user_info_response.json()
 
-    email = google_user.get("email")
-    username = google_user.get("name")
+    email: str = google_user.get("email")
+    username: str = google_user.get("name")
 
     query = select(Users).where(Users.email == email)
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
 
     if not db_user:
-        random_password = generate_password_hash(os.urandom(16).hex())
+        random_password: str = generate_password_hash(os.urandom(16).hex())
 
-        db_user = Users(username=username, email=email, password=random_password)
+        db_user = Users(
+            username=username.title().strip(),
+            email=email.strip(),
+            password=random_password.strip(),
+        )
         try:
             session.add(db_user)
             await session.commit()
@@ -248,8 +270,21 @@ async def google_callback(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
 
+        create_access_jwt = create_reset_token(
+            {
+                "username": db_user.UserName,
+                "email": db_user.email,
+                "ip-address": retrieve_client_ip(request),
+            }
+        )
+
     return {
         "status": "success",
         "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
-        "user": {"username": db_user.UserName, "email": db_user.email},
+        "token": create_access_jwt,
     }
+
+
+@auth_router.get("/check")
+async def read_users_me(current_user: str = Depends(get_current_user)):
+    return {"user_email": current_user, "message": "Welcome to your profile!"}

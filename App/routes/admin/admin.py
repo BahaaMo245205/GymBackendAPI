@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admin"])
+router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
 
 
 @router_admin.post("/Membership_Management")
