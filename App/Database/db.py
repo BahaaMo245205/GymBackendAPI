@@ -38,17 +38,19 @@ class UserProfile(Base):
     Phone = Column(String(45), nullable=False)
     Address = Column(Text, nullable=False)
     gender = Column(String(45), nullable=False)
+    Age = Column(Integer,nullable=False)
     Role = Column(String(45), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
 
     author = relationship("Users", back_populates="profile")
 
-    def __init__(self, userid, phone, address, gender, role, is_active=True):
+    def __init__(self, userid, phone, address, gender, role,age ,is_active=True):
         self.UserID = userid
         self.Phone = phone
         self.Address = address
         self.gender = gender
         self.Role = role
+        self.Age = age
         self.is_active = is_active
 
 class Memberships(Base):

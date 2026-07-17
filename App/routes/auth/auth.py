@@ -15,15 +15,14 @@ from App.routes.auth.helper import (
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 # from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
-from App.Database.db import get_async_session, Users
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from App.Database.db import get_async_session, Users,UserProfile
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import RedirectResponse
 from fastapi.requests import Request
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 from sqlalchemy import select
-from typing import Annotated
 import httpx
 import os
 
@@ -77,6 +76,7 @@ async def login(
     access_token, refresh_token = create_access_token(
         data={
             "sub": {
+                "ID":db_user.UserID,
                 "Email": db_user.email,
                 "UserName": db_user.UserName,
                 "ip-address": retrieve_client_ip(request),
@@ -192,7 +192,7 @@ async def reset_password(
 
 @auth_router.get("/loginGoogle")
 async def login_Google():
-    """This path for testing"""
+    """This's path for testing"""
     query_params = {
         "client_id": GOOGLE_CLIENT_ID,
         "redirect_uri": GOOGLE_REDIRECT_URI,
@@ -244,9 +244,11 @@ async def google_callback(
             )
 
         google_user: dict = user_info_response.json()
+        print(google_user)
 
     email: str = google_user.get("email")
     username: str = google_user.get("name")
+    
 
     query = select(Users).where(Users.email == email)
     result = await session.execute(query)
@@ -260,6 +262,7 @@ async def google_callback(
             email=email.strip(),
             password=random_password.strip(),
         )
+
         try:
             session.add(db_user)
             await session.commit()
@@ -270,8 +273,9 @@ async def google_callback(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
 
-        create_access_jwt = create_reset_token(
+        access_token , refresh_token = create_access_token(
             {
+                "id":db_user.UserID,
                 "username": db_user.UserName,
                 "email": db_user.email,
                 "ip-address": retrieve_client_ip(request),
@@ -281,7 +285,7 @@ async def google_callback(
     return {
         "status": "success",
         "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
-        "token": create_access_jwt,
+        "token": access_token,
     }
 
 

@@ -24,7 +24,6 @@ async def generate_password_hash(password: Annotated[str, None]) -> str:
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
     return hash_password
 
-
 async def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
         raise HTTPException(501, "Error Chick password")
@@ -41,7 +40,6 @@ async def create_reset_token(gmail: str | dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=10)
     to_encode = {"exp": expire, "sub": gmail, "action": "reset_password"}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-
 
 async def verify_reset_token(token) -> str | None:
     """This functions for check JWT token & resetting passwords"""
@@ -63,13 +61,12 @@ async def create_access_token(data: dict) -> str | None:
     access_payload = data.copy()
     access_payload.update({"exp": datetime.utcnow() + timedelta(minutes=15)})
     access_token = jwt.encode(access_payload, SECRET_KEY, algorithm=ALGORITHM)
-    
+
     refresh_payload = data.copy()
     refresh_payload.update({"exp": datetime.utcnow() + timedelta(days=7)})
     refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm=ALGORITHM)
-    
-    return access_token ,refresh_token
 
+    return access_token, refresh_token
 
 async def retrieve_client_ip(request: Request) -> str:
 
