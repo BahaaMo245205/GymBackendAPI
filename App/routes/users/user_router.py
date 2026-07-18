@@ -12,13 +12,23 @@ from App.Database.db import (
     Booking,
 )
 from App.routes.users.model import ChangePassword, InformationUser
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Query, Depends, HTTPException,Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Union
+from dotenv import load_dotenv
 from sqlalchemy import select
+from jose import jwt
+import datetime
+import os
 
 router_user = APIRouter(prefix="/v1/api/user", tags=["User"])
 
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 @router_user.get("/me")
 async def ProfileUser(
@@ -142,3 +152,23 @@ async def subscriptions(
 @router_user.put("/me/bookings")
 async def bookings():
     return None
+
+
+@router_user.post("/refresh")
+async def refresh_session(refresh_token: str = Body(..., embed=True)):
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_email = payload.get("sub")
+        
+        if not user_email:
+            raise HTTPException(status_code=401, detail="توكن غير صالح")
+            
+        new_access_payload = {"sub": user_email, "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15)}
+        new_access_token = jwt.encode(new_access_payload, SECRET_KEY, algorithm=ALGORITHM)
+        
+        return {"access_token": new_access_token, "token_type": "bearer"}
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="التوكن ده مضروب🚨")

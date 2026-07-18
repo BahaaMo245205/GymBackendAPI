@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from App.Database.db import create_db_and_table
+from fastapi.middleware.cors import CORSMiddleware
+
 
 @asynccontextmanager
-async def lifespan (app:FastAPI):
+async def lifespan(app: FastAPI):
     await create_db_and_table()
     yield
-    
+
+
 tags_metadata = [
     {
         "name": "Auth",
@@ -27,7 +30,7 @@ tags_metadata = [
     {
         "name": "Admins",
         "description": "صلاحيات الإدارة العليا (RBAC) للتحكم في الكباتن، الموظفين، والتقارير المالية للنظام.",
-    }
+    },
 ]
 
 app = FastAPI(
@@ -53,7 +56,14 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
     openapi_tags=tags_metadata,
-    lifespan=lifespan 
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 from App.routes.classes import classes_router

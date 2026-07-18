@@ -14,9 +14,10 @@ from App.routes.auth.helper import (
     get_current_user,
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+
 # from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from App.Database.db import get_async_session, Users,UserProfile
+from App.Database.db import get_async_session, Users, UserProfile
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import RedirectResponse
 from fastapi.requests import Request
@@ -58,6 +59,15 @@ async def login(
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
 
+    query_role = select(UserProfile).where(UserProfile.UserID == db_user.UserID)
+    result_role = await session.execute(query_role)
+    user_role = result_role.scalar_one_or_none()
+
+    UserProfileNotFoundException = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="رجاء ادخال بياناتك الشخصيه ⚠️ ",
+    )
+
     invalid_credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="🚨 البريد الإلكتروني أو كلمة المرور غير صحيحة!",
@@ -65,6 +75,9 @@ async def login(
 
     if not db_user:
         raise invalid_credentials_exception
+
+    if not user_role:
+        raise UserProfileNotFoundException
 
     is_password_correct = validate_password(
         hashedPassword=db_user.password, password=login_user.password
@@ -76,10 +89,11 @@ async def login(
     access_token, refresh_token = create_access_token(
         data={
             "sub": {
-                "ID":db_user.UserID,
+                "ID": db_user.UserID,
                 "Email": db_user.email,
                 "UserName": db_user.UserName,
                 "ip-address": retrieve_client_ip(request),
+                "user-role": user_role.Role,
             }
         }
     )
@@ -208,7 +222,9 @@ async def login_Google():
 
 @auth_router.get("/google/callback")
 async def google_callback(
-    code: str, request: Request, session: AsyncSession = Depends(get_async_session)
+    code: str,
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
 ):
     if not code:
         raise HTTPException(status_code=400, detail="🚨 الـ Authorization Code مفقود!")
@@ -248,11 +264,22 @@ async def google_callback(
 
     email: str = google_user.get("email")
     username: str = google_user.get("name")
-    
 
     query = select(Users).where(Users.email == email)
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
+
+    query_role = select(UserProfile).where(UserProfile.UserID == db_user.UserID)
+    result_role = await session.execute(query_role)
+    user_role = result_role.scalar_one_or_none()
+
+    UserProfileNotFoundException = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="رجاء ادخال بياناتك الشخصيه ⚠️ ",
+    )
+
+    if not user_role:
+        raise UserProfileNotFoundException
 
     if not db_user:
         random_password: str = generate_password_hash(os.urandom(16).hex())
@@ -273,12 +300,13 @@ async def google_callback(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
 
-        access_token , refresh_token = create_access_token(
+        access_token, refresh_token = create_access_token(
             {
-                "id":db_user.UserID,
+                "id": db_user.UserID,
                 "username": db_user.UserName,
                 "email": db_user.email,
                 "ip-address": retrieve_client_ip(request),
+                "user-role": user_role.Role,
             }
         )
 
@@ -286,9 +314,10 @@ async def google_callback(
         "status": "success",
         "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
         "token": access_token,
+        "refresh-token": refresh_token,
     }
 
 
 @auth_router.get("/check")
 async def read_users_me(current_user: str = Depends(get_current_user)):
-    return {"user_email": current_user, "message": "Welcome to your profile!"}
+    return {"user_email": current_user[0], "message": "Welcome to your profile!"}

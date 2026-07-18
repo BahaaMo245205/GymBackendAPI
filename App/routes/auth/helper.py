@@ -16,7 +16,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 security_scheme = HTTPBearer()
 
 
-async def generate_password_hash(password: Annotated[str, None]) -> str:
+def generate_password_hash(password: Annotated[str, None]) -> str:
     """Create password hash"""
     if not password:
         raise HTTPException(501, "Error hash password")
@@ -24,7 +24,7 @@ async def generate_password_hash(password: Annotated[str, None]) -> str:
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
     return hash_password
 
-async def validate_password(hashedPassword: str, password: str) -> bool:
+def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
         raise HTTPException(501, "Error Chick password")
 
@@ -35,13 +35,13 @@ async def validate_password(hashedPassword: str, password: str) -> bool:
     return False
 
 
-async def create_reset_token(gmail: str | dict) -> str:
+def create_reset_token(gmail: str | dict) -> str:
     """This functions for forgetting passwords"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=10)
     to_encode = {"exp": expire, "sub": gmail, "action": "reset_password"}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def verify_reset_token(token) -> str | None:
+def verify_reset_token(token) -> str | None:
     """This functions for check JWT token & resetting passwords"""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
@@ -52,7 +52,7 @@ async def verify_reset_token(token) -> str | None:
         return None
 
 
-async def create_access_token(data: dict) -> str | None:
+def create_access_token(data: dict) -> str | None:
     """This function is for creating access token users"""
 
     if not data:
@@ -68,7 +68,7 @@ async def create_access_token(data: dict) -> str | None:
 
     return access_token, refresh_token
 
-async def retrieve_client_ip(request: Request) -> str:
+def retrieve_client_ip(request: Request) -> str:
 
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     if x_forwarded_for:
@@ -94,13 +94,14 @@ def get_current_user(
         )
         user_email: str = payload.get("sub")
         ipaddress: str = payload.get("ip-address")
+        user_role:str = payload.get('role-user')
         if user_email is None or ipaddress != retrieve_client_ip(request):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="توكن غير صالح: البيانات ناقصة.",
             )
 
-        return user_email
+        return user_email,user_role
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error : {e}")
