@@ -1,8 +1,42 @@
-from pydantic import BaseModel,Field
+from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import Optional
 
-class MembershipDetails (BaseModel):
-    Price:float
-    duration_months:str
-    walk_machine:bool
-    deduct:str
-    description:str
+
+class MembershipDetails(BaseModel):
+    Price: float = Field(..., gt=0, title="سعر الباقة")
+    duration_months: int = Field(..., gt=0, title="عدد أشهر الباقة")
+    walk_machine: bool = Field(default=False, title="هل تتضمن جهاز المشي؟")
+    deduct: float = Field(default=0, title="قيمة الخصم")
+    description: str = Field(None, title="وصف الباقة")
+
+
+class UserStatusUpdate(BaseModel):
+    is_disabled: bool
+
+
+class ClassCreateSchema(BaseModel):
+    ClassName: str = Field(..., title="اسم الحصة")
+    TypeClass: str = Field(..., title="نوع الحصة")
+    Price: int = Field(..., gt=0, title="سعر الحصة")
+    Date: datetime = Field(..., title="تاريخ الحصة")
+    Start_time: str = Field(..., title="وقت البداية")
+    End_time: str = Field(..., title="وقت النهاية")
+    Trainer_id: str = Field(..., title="معرف المدرب المسؤول")
+
+
+class ClassUpdateSchema(BaseModel):
+    ClassName: Optional[str] = None
+    TypeClass: Optional[str] = None
+    Price: Optional[int] = Field(None, gt=0)
+    Date: Optional[datetime] = None
+    Start_time: Optional[str] = None
+    End_time: Optional[str] = None
+    Trainer_id: Optional[str] = None
+    Is_active: Optional[bool] = None
+
+
+class RoleUpdateSchema(BaseModel):
+    new_role: str = Field(
+        ..., title="الصلاحية الجديدة للمستخدم", examples=["Admin", "Trainer", "Member"]
+    )

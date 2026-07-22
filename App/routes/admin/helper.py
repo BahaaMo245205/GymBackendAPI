@@ -12,23 +12,10 @@ load_dotenv()
 security_scheme = HTTPBearer()
 
 
-def retrieve_client_ip(request: Request) -> str:
-
-    x_forwarded_for = request.headers.get("X-Forwarded-For")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-
-    x_real_ip = request.headers.get("X-Real-IP")
-    if x_real_ip:
-        x_real_ip.split(",")[0].strip()
-
-    return request.client.host
-
-
-def get_current_user_role(
+def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> str:
+) -> dict:
     token = credentials.credentials
     try:
         payload = jwt.decode(
@@ -36,26 +23,55 @@ def get_current_user_role(
             str(os.getenv("SECRET_KEY")),
             algorithms=[str(os.getenv("ALGORITHM"))],
         )
-        current_user_role: str = payload.get("sub").get("role-user")
-        ipaddress: str = payload.get("sub").get("ip-address")
-        if current_user_role is None or ipaddress != retrieve_client_ip(request):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="توكن غير صالح: البيانات ناقصة.",
-            )
+        data_user: dict = payload.get("sub")
 
-        return current_user_role
+        if not data_user or not data_user.get("Email"):
+            raise HTTPException(status_code=401, detail="بيانات التوكن ناقصة")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error : {e}")
+        if data_user.get("ip-address") != retrieve_client_ip(request):
+            raise HTTPException(status_code=401, detail="محاولة اختراق: الـ IP متغير!")
+
+        return data_user
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="انتهت صلاحية التوكن، سجل دخول تاني يا بطل.",
-        )
+        raise HTTPException(status_code=401, detail="انتهت صلاحية التوكن.")
     except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="التوكن غير صالح.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"خطأ غير متوقع: {e}")
+
+
+def retrieve_client_ip(request: Request) -> str:
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+
+    x_real_ip = request.headers.get("X-Real-IP")
+    if x_real_ip:
+        return x_real_ip.strip()
+
+    return request.client.host if request.client else "unknown"
+
+
+def ensure_admin_role(current_user: dict = Depends(get_current_user)) -> str:
+    user_role = current_user.get("user-role")
+
+    if user_role != "Admin":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="التوكن ده مضروب وغير صالح! 🚨",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="عفواً.. هذا المسار مخصص للأدمن فقط!",
         )
+
+    return user_role
+
+
+def ensure_trainer_role(current_user: dict = Depends(get_current_user)) -> str:
+    user_role = current_user.get("user-role")
+
+    if user_role != "Trainer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="عفواً.. هذا المسار مخصص للمدربين فقط!",
+        )
+
+    return user_role
