@@ -5,10 +5,16 @@ from .models import (
     ClassUpdateSchema,
     RoleUpdateSchema,
 )
-from ...Database.db import Memberships, get_async_session, Users, UserProfile, Classes
+from ...Database.db import (
+    Memberships,
+    get_async_session,
+    UserProfile,
+    Classes,
+    Booking,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Path
-from sqlalchemy import select
+from sqlalchemy import select, func
 from .helper import *
 
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
@@ -165,9 +171,52 @@ async def get_admin_role_info(current_role: str = Depends(ensure_admin_role)):
     }
 
 
-@router_admin.get("/Reports")
-async def Reports():
-    """This rourts for extracting reports"""
+@router_admin.get("/Reports", status_code=status.HTTP_200_OK)
+async def get_system_reports(
+    session: AsyncSession = Depends(get_async_session),
+    admin_role: str = Depends(ensure_admin_role),
+):
+    try:
+        # 1. إجمالي عدد المستخدمين في السيستم
+        users_count_query = select(func.count(UserProfile.UserID))
+        users_result = await session.execute(users_count_query)
+        total_users = users_result.scalar() or 0
+
+        # 2. إجمالي عدد الحصص النشطة
+        classes_count_query = select(func.count(Classes.ClassesID)).where(
+            Classes.Is_active == True
+        )
+        classes_result = await session.execute(classes_count_query)
+        total_classes = classes_result.scalar() or 0
+
+        # 3. إجمالي عدد الحجوزات النشطة
+        bookings_count_query = select(func.count(Booking.BookingID)).where(
+            Booking.Is_active == True
+        )
+        bookings_result = await session.execute(bookings_count_query)
+        total_bookings = bookings_result.scalar() or 0
+
+        # 4. إجمالي الأرباح المتوقعة أو المحسوبة من الاشتراكات (مثال حسابي لو جدول الاشتراكات يحتوي على Price)
+        # revenue_query = select(func.sum(Memberships.Price))
+        # revenue_result = await session.execute(revenue_query)
+        # total_revenue = revenue_result.scalar() or 0
+
+        return {
+            "status": "success",
+            "message": "تم استخراج تقارير النظام بنجاح",
+            "reports": {
+                "total_users": total_users,
+                "total_active_classes": total_classes,
+                "total_active_bookings": total_bookings,
+                # "total_revenue": total_revenue
+            },
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"حدث خطأ أثناء استخراج التقارير: {str(e)}",
+        )
 
 
 @router_admin.patch("/users/{user_id}/status", status_code=status.HTTP_200_OK)

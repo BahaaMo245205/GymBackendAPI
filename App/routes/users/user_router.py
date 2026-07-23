@@ -11,8 +11,8 @@ from App.Database.db import (
     Subscriptions,
     Booking,
 )
+from fastapi import APIRouter, Query, Depends, HTTPException, Body, status
 from App.routes.users.model import ChangePassword, InformationUser
-from fastapi import APIRouter, Query, Depends, HTTPException,Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Union
 from dotenv import load_dotenv
@@ -29,6 +29,7 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 
 @router_user.get("/me")
 async def ProfileUser(
@@ -138,20 +139,44 @@ async def ChangePasswords(
     return {"message": "تم تغيير كلمة المرور بنجاح"}
 
 
-@router_user.put("/me/subscriptions")
-async def subscriptions(
-    IdUser: str=Depends(get_current_user_id), session: AsyncSession = Depends(get_async_session)
+@router_user.get("/me/subscriptions", status_code=status.HTTP_200_OK)
+async def get_my_subscriptions(
+    session: AsyncSession = Depends(get_async_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
-    query = select(Subscriptions).where(Subscriptions.UserID == IdUser)
+    query = select(Subscriptions).where(Subscriptions.UserID == current_user_id)
     result = await session.execute(query)
-    db_subscriptions = result.scalar_one_or_none()
-    
-    return None
+    db_subscriptions = result.scalars().all()
+
+    if not db_subscriptions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="عفواً، لا توجد اشتراكات مسجلة لهذا الحساب حالياً.",
+        )
+
+    return {
+        "status": "success",
+        "count": len(db_subscriptions),
+        "subscriptions": db_subscriptions,
+    }
 
 
-@router_user.put("/me/bookings")
-async def bookings():
-    return None
+@router_user.get("/me/bookings", status_code=status.HTTP_200_OK)
+async def get_my_bookings(
+    current_user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_async_session),
+):
+    query = select(Booking).where(Booking.UserID == current_user_id)
+    result = await session.execute(query)
+    db_bookings = result.scalars().all()
+
+    if not db_bookings:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="عفواً، ليس لديك أي حجوزات مسجلة حتى الآن.",
+        )
+
+    return {"status": "success", "count": len(db_bookings), "bookings": db_bookings}
 
 
 @router_user.post("/refresh")
@@ -159,16 +184,23 @@ async def refresh_session(refresh_token: str = Body(..., embed=True)):
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
         user_email = payload.get("sub")
-        
+
         if not user_email:
             raise HTTPException(status_code=401, detail="توكن غير صالح")
-            
-        new_access_payload = {"sub": user_email, "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15)}
-        new_access_token = jwt.encode(new_access_payload, SECRET_KEY, algorithm=ALGORITHM)
-        
+
+        new_access_payload = {
+            "sub": user_email,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
+        }
+        new_access_token = jwt.encode(
+            new_access_payload, SECRET_KEY, algorithm=ALGORITHM
+        )
+
         return {"access_token": new_access_token, "token_type": "bearer"}
-        
+
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل")
+        raise HTTPException(
+            status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل"
+        )
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="التوكن ده مضروب🚨")
