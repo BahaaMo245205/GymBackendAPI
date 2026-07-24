@@ -59,15 +59,6 @@ async def login(
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
 
-    query_role = select(UserProfile).where(UserProfile.UserID == db_user.UserID)
-    result_role = await session.execute(query_role)
-    user_role = result_role.scalar_one_or_none()
-
-    UserProfileNotFoundException = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="رجاء ادخال بياناتك الشخصيه ⚠️ ",
-    )
-
     invalid_credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="🚨 البريد الإلكتروني أو كلمة المرور غير صحيحة!",
@@ -75,9 +66,6 @@ async def login(
 
     if not db_user:
         raise invalid_credentials_exception
-
-    if not user_role:
-        raise UserProfileNotFoundException
 
     is_password_correct = validate_password(
         hashedPassword=db_user.password, password=login_user.password
@@ -93,7 +81,6 @@ async def login(
                 "Email": db_user.email,
                 "UserName": db_user.UserName,
                 "ip-address": retrieve_client_ip(request),
-                "user-role": user_role.Role,
             }
         }
     )
@@ -128,9 +115,8 @@ async def register(
         username = register.username.title().strip()
         email = register.email.strip()
         password = register.password.strip()
-        confirm_password = register.confirm_password.strip()
 
-        if not username and not email and not password and not confirm_password:
+        if not username and not email and not password:
             raise HTTPException(status_code=401, detail="Please input all data !")
 
         add_user = Users(username, email, generate_password_hash(password))
@@ -160,12 +146,12 @@ async def forgot_password(
         }
 
     token = create_reset_token(user.email)
-    reset_link = f"http://localhost:3000/reset-password?token={token}"
+    reset_link = f"http://localhost:5500/reset-password?token={token}"
 
     message = MessageSchema(
         subject="Gym System - Reset Your Password",
         recipients=[user.email],
-        body=f"{token}",
+        body=f"{reset_link}",
         subtype=MessageType.html,
     )
 
@@ -269,18 +255,6 @@ async def google_callback(
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
 
-    query_role = select(UserProfile).where(UserProfile.UserID == db_user.UserID)
-    result_role = await session.execute(query_role)
-    user_role = result_role.scalar_one_or_none()
-
-    UserProfileNotFoundException = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="رجاء ادخال بياناتك الشخصيه ⚠️ ",
-    )
-
-    if not user_role:
-        raise UserProfileNotFoundException
-
     if not db_user:
         random_password: str = generate_password_hash(os.urandom(16).hex())
 
@@ -300,13 +274,12 @@ async def google_callback(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
 
-        access_token, refresh_token = create_access_token(
+    access_token, refresh_token = create_access_token(
             {
                 "id": db_user.UserID,
                 "username": db_user.UserName,
                 "email": db_user.email,
                 "ip-address": retrieve_client_ip(request),
-                "user-role": user_role.Role,
             }
         )
 

@@ -6,13 +6,7 @@ class RegisterSchema(BaseModel):
     username: str = Field(..., min_length=4, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    confirm_password: str = Field(..., min_length=8)
 
-    @model_validator(mode="after")
-    def verify_passwords_match(self) -> Self:
-        if self.password != self.confirm_password:
-            raise ValueError("🚨 Passwords do not match!")
-        return self
 
 
 class RegisterSchemaOut(BaseModel):
