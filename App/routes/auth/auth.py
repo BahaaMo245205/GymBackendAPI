@@ -14,8 +14,6 @@ from App.routes.auth.helper import (
     get_current_user,
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-
-# from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from App.Database.db import get_async_session, Users, UserProfile
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,8 +29,6 @@ load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = "http://localhost:8000/v1/api/auth/google/callback"
-
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 auth_router = APIRouter(prefix="/v1/api/auth", tags=["Auth"])
 conf = ConnectionConfig(
@@ -76,12 +72,11 @@ async def login(
 
     access_token, refresh_token = create_access_token(
         data={
-            "sub": {
-                "ID": db_user.UserID,
-                "Email": db_user.email,
-                "UserName": db_user.UserName,
-                "ip-address": retrieve_client_ip(request),
-            }
+            "ID": db_user.UserID,
+            "Email": db_user.email,
+            "UserName": db_user.UserName,
+            "ip-address": retrieve_client_ip(request),
+            "Role": db_user.Role,
         }
     )
     if not access_token:
@@ -93,6 +88,7 @@ async def login(
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
+        "UserName": db_user.UserName,
         "token_type": "bearer",
     }
 
@@ -119,7 +115,7 @@ async def register(
         if not username and not email and not password:
             raise HTTPException(status_code=401, detail="Please input all data !")
 
-        add_user = Users(username, email, generate_password_hash(password))
+        add_user = Users(username, email, generate_password_hash(password), role="User")
         session.add(add_user)
         await session.commit()
         await session.refresh(add_user)
@@ -151,7 +147,7 @@ async def forgot_password(
     message = MessageSchema(
         subject="Gym System - Reset Your Password",
         recipients=[user.email],
-        body=f"{reset_link}",
+        body=f"<a href='{reset_link}'>تغير باسورد </a>",
         subtype=MessageType.html,
     )
 
@@ -262,6 +258,7 @@ async def google_callback(
             username=username.title().strip(),
             email=email.strip(),
             password=random_password.strip(),
+            role="User",
         )
 
         try:
@@ -274,12 +271,13 @@ async def google_callback(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
 
-    access_token, refresh_token = create_access_token(
+        access_token, refresh_token = create_access_token(
             {
                 "id": db_user.UserID,
                 "username": db_user.UserName,
                 "email": db_user.email,
                 "ip-address": retrieve_client_ip(request),
+                "Role": db_user.Role,
             }
         )
 
@@ -293,4 +291,4 @@ async def google_callback(
 
 @auth_router.get("/check")
 async def read_users_me(current_user: str = Depends(get_current_user)):
-    return {"user_email": current_user[0], "message": "Welcome to your profile!"}
+    return {"Info": current_user, "message": "Welcome to your profile!"}

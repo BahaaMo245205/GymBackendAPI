@@ -6,6 +6,7 @@ dist/
 wheels/
 *.egg-info
 MarkDown/
+Explain Codes/
 
 # Virtual environments
 .venv

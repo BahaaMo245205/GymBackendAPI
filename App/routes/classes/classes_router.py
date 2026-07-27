@@ -24,11 +24,10 @@ async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
 
 @classes_router.post("/{class_id}/book", status_code=status.HTTP_201_CREATED)
 async def book_class(
-    class_id: str,  # تم التعديل ليكون String (UUID) متوافق مع جدول الحصص
+    class_id: str,  
     current_user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_async_session),
 ):
-    # 1. التأكد أن الحصة موجودة أصلاً وفعالة
     class_query = select(Classes).where(
         Classes.ClassesID == class_id, Classes.Is_active == True
     )

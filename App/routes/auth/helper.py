@@ -80,39 +80,39 @@ def retrieve_client_ip(request: Request) -> str:
 
     return request.client.host
 
-
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> str:
+) -> dict:
     token = credentials.credentials
     try:
         payload = jwt.decode(
             token,
-            str(os.getenv("SECRET_KEY")),
-            algorithms=[str(os.getenv("ALGORITHM"))],
+            key=str(SECRET_KEY),
+            algorithms=[str(ALGORITHM)],
         )
-        user_email: str = payload.get("sub")
-        ipaddress: str = payload.get("ip-address")
-        user_role:str = payload.get('role-user')
+
+        user_id = payload.get("ID")
+        user_email = payload.get("Email")
+        user_name = payload.get("UserName")
+        ipaddress = payload.get("ip-address")
+        user_role = payload.get("Role")
+
         if user_email is None or ipaddress != retrieve_client_ip(request):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="توكن غير صالح: البيانات ناقصة.",
+                detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",
             )
 
-        return user_email,user_role
+        return {
+            "ID": user_id,
+            "Email": user_email,
+            "UserName": user_name,
+            "Role": user_role
+        }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error : {e}")
-
-    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="انتهت صلاحية التوكن، سجل دخول تاني يا بطل.",
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="التوكن ده مضروب وغير صالح! 🚨",
+            detail="التوكن غير صالح أو انتهت صلاحيته.",
         )

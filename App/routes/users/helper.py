@@ -12,7 +12,7 @@ security_scheme = HTTPBearer()
 load_dotenv()
 
 
-async def generate_password_hash(password: Annotated[str, None]) -> str:
+def generate_password_hash(password: Annotated[str, None]) -> str:
     """Create password hash"""
     if not password:
         raise HTTPException(501, "Error hash password")
@@ -21,7 +21,7 @@ async def generate_password_hash(password: Annotated[str, None]) -> str:
     return hash_password
 
 
-async def validate_password(hashedPassword: str, password: str) -> bool:
+def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
         raise HTTPException(501, "Error Chick password")
 
@@ -32,7 +32,7 @@ async def validate_password(hashedPassword: str, password: str) -> bool:
     return False
 
 
-async def retrieve_client_ip(request: Request) -> str:
+def retrieve_client_ip(request: Request) -> str:
 
     x_forwarded_for = request.headers.get("X-Forwarded-For")
     if x_forwarded_for:
@@ -45,7 +45,7 @@ async def retrieve_client_ip(request: Request) -> str:
     return request.client.host
 
 
-def get_current_user_id(
+def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
 ) -> str:
@@ -54,17 +54,18 @@ def get_current_user_id(
         payload = jwt.decode(
             token,
             str(os.getenv("SECRET_KEY")),
-            algorithms=[str(os.getenv("ALGORITHM"))],
+            algorithms=str(os.getenv("ALGORITHM", "HS256")),
         )
-        user_id: str = payload.get("sub").get("id")
-        ipaddress: str = payload.get("sub").get("ip-address")
-        if user_id is None or ipaddress != retrieve_client_ip(request):
+        user_id: str = payload.get("ID")
+        ipaddress: str = payload.get("ip-address")
+        
+        if (user_id == None) or (ipaddress != retrieve_client_ip(request)):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="توكن غير صالح: البيانات ناقصة.",
             )
 
-        return user_id
+        return payload
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error : {e}")

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - نظام الجيم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: #ffffff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .username {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 8px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        /* Main Layout */
+        .main-content {
+            max-width: 1100px;
+            margin: 36px auto;
+            padding: 0 20px 40px;
+        }
+
+        .section-title {
+            color: #1e293b;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        /* Profile Header Card */
+        .profile-header {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #e2e8f0;
+            background: #f1f5f9;
+        }
+
+        .avatar-upload {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            background: #3b82f6;
+            color: white;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            border: 2px solid white;
+            transition: background 0.2s;
+        }
+
+        .avatar-upload:hover {
+            background: #2563eb;
+        }
+
+        .avatar-upload input {
+            display: none;
+        }
+
+        .profile-info h1 {
+            font-size: 24px;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .role-user {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .role-trainer {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .role-admin {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .info-item strong {
+            color: #334155;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        @media (max-width: 800px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #f8fafc;
+            color: #1e293b;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        .btn {
+            padding: 11px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        /* Lists */
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item h4 {
+            font-size: 15px;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .list-item p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-active {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .badge-expired {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: #94a3b8;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+
+        #loader {
+            text-align: center;
+            color: #64748b;
+            margin-top: 120px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <p id="loader">جاري تحميل الملف الشخصي...</p>
+
+    <!-- Navbar -->
+    <header class="navbar" id="navbar" style="display: none;">
+        <a href="index.html" class="logo">⚡ نظام الجيم</a>
+
+        <nav class="nav-links">
+            <a href="index.html" class="nav-link">الرئيسية</a>
+            <a href="memberships.html" class="nav-link">الاشتراكات</a>
+            <a href="classes.html" class="nav-link">الكلاسات</a>
+            <a href="profile.html" class="nav-link active">الملف الشخصي</a>
+        </nav>
+
+        <div class="user-section">
+            <span class="username" id="nav-username"></span>
+            <button id="logoutBtn" class="logout-btn">تسجيل الخروج</button>
+        </div>
+    </header>
+
+    <main class="main-content" id="content" style="display: none;">
+
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="avatar-wrapper">
+                <img src="" alt="صورة المستخدم" class="avatar" id="userAvatar"
+                    onerror="this.src='https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff&size=128'">
+                <label class="avatar-upload" title="تغيير الصورة">
+                    📷
+                    <input type="file" id="imageInput" accept="image/*">
+                </label>
+            </div>
+
+            <div class="profile-info">
+                <h1 id="profileName">—</h1>
+                <div id="roleBadge" class="role-badge role-user">User</div>
+                <div class="info-row">
+                    <div class="info-item"><strong>العمر:</strong> <span id="infoAge">—</span></div>
+                    <div class="info-item"><strong>النوع:</strong> <span id="infoGender">—</span></div>
+                    <div class="info-item"><strong>الهاتف:</strong> <span id="infoPhone">—</span></div>
+                    <div class="info-item"><strong>العنوان:</strong> <span id="infoAddress">—</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forms Grid -->
+        <div class="grid-2">
+
+            <!-- Update Info -->
+            <div class="card">
+                <h3 class="section-title">تعديل البيانات الشخصية</h3>
+                <form id="updateForm">
+                    <div class="form-group">
+                        <label>العمر</label>
+                        <input type="number" id="inputAge" min="10" max="100" placeholder="أدخل عمرك">
+                    </div>
+                    <div class="form-group">
+                        <label>النوع</label>
+                        <select id="inputGender">
+                            <option value="">اختر</option>
+                            <option value="Male">ذكر</option>
+                            <option value="Female">أنثى</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>رقم الهاتف</label>
+                        <input type="text" id="inputPhone" placeholder="01xxxxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label>العنوان</label>
+                        <input type="text" id="inputAddress" placeholder="المدينة - الحي">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">حفظ التعديلات</button>
+                </form>
+            </div>
+
+            <!-- Reset Password -->
+            <div class="card">
+                <h3 class="section-title">تغيير كلمة المرور</h3>
+                <form id="passwordForm">
+                    <div class="form-group">
+                        <label>كلمة المرور الحالية</label>
+                        <input type="password" id="currentPassword" placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور الجديدة</label>
+                        <input type="password" id="newPassword" placeholder="••••••••">
+                    </div>
+                    <div class="form-group">
+                        <label>تأكيد كلمة المرور</label>
+                        <input type="password" id="confirmPassword" placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-danger btn-full">تغيير كلمة المرور</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Memberships History -->
+        <div class="card" style="margin-bottom: 28px;">
+            <h3 class="section-title">اشتراكاتي السابقة والحالية</h3>
+            <div id="membershipsList">
+                <p class="empty-msg">جاري التحميل...</p>
+            </div>
+        </div>
+
+        <!-- Classes -->
+        <div class="card">
+            <h3 class="section-title">الكلاسات المسجل فيها</h3>
+            <div id="classesList">
+                <p class="empty-msg">جاري التحميل...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+        let currentUser = null;
+
+        // ========== Authentication ==========
+        async function checkAuth() {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return null;
+            }
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.Info) {
+                    return { token, info: data.Info };
+                } else {
+                    localStorage.clear();
+                    window.location.href = "login.html";
+                    return null;
+                }
+            } catch (err) {
+                console.error(err);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        // ========== Load Profile ==========
+        async function loadProfile(token) {
+            try {
+                // جلب بيانات المستخدم التفصيلية
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    currentUser = data;
+                    renderProfile(data);
+                } else {
+                    // لو الـ endpoint مختلف، نستخدم بيانات الـ check
+                    console.warn("Profile endpoint failed, using basic info");
+                }
+            } catch (err) {
+                console.error("Error loading profile:", err);
+            }
+        }
+
+        function renderProfile(user) {
+            // الصورة
+            const avatar = document.getElementById("userAvatar");
+            if (user.image && user.image !== "string") {
+                avatar.src = user.image.startsWith("http") ? user.image : `${BACKEND_URL}${user.image}`;
+            }
+
+            // الاسم والدور
+            const userName = user.UserName || user.username || "مستخدم";
+            document.getElementById("profileName").textContent = userName;
+            document.getElementById("nav-username").textContent = `👤 ${userName}`;
+
+            const roleBadge = document.getElementById("roleBadge");
+            const role = (user.Role || "User").toLowerCase();
+
+            roleBadge.textContent = user.Role || "User";
+            roleBadge.className = "role-badge ";
+
+            if (role === "admin") {
+                roleBadge.classList.add("role-admin");
+                roleBadge.textContent = "مدير النظام";
+            } else if (role === "trainer") {
+                roleBadge.classList.add("role-trainer");
+                roleBadge.textContent = "مدرب";
+            } else {
+                roleBadge.classList.add("role-user");
+                roleBadge.textContent = "مستخدم عادي";
+            }
+
+            // استخراج بيانات البروفایل (سواء كانت مدمجة مباشرة أو داخل كائن Profile الفرعي)
+            const profileData = user.Profile || user;
+
+            // عرض البيانات في الصفحة
+            document.getElementById("infoAge").textContent = profileData.Age || "—";
+            document.getElementById("infoGender").textContent = profileData.Gender === "Male" ? "ذكر" : profileData.Gender === "Female" ? "أنثى" : (profileData.Gender || "—");
+            document.getElementById("infoPhone").textContent = profileData.Phone || profileData.phone || "—";
+            document.getElementById("infoAddress").textContent = profileData.Address || "—";
+
+            // ملء حقول الفورم للتعديل
+            document.getElementById("inputAge").value = profileData.Age || "";
+            document.getElementById("inputGender").value = profileData.Gender || "";
+            document.getElementById("inputPhone").value = profileData.Phone || profileData.phone || "";
+            document.getElementById("inputAddress").value = profileData.Address || "";
+        }
+        // ========== Update Info ==========
+        document.getElementById("updateForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem("access_token");
+
+            const body = {
+                Age: Number(document.getElementById("inputAge").value) || 0,
+                Gender: document.getElementById("inputGender").value,
+                phone: document.getElementById("inputPhone").value,
+                Address: document.getElementById("inputAddress").value
+            };
+
+            try {
+                const userid = localStorage.getItem("user_id");
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update?IdUser=${userid}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert("تم تحديث البيانات بنجاح ✓");
+                    loadProfile(token);
+                } else {
+                    alert("فشل التحديث: " + (result.detail || "حدث خطأ"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        });
+
+        // ========== Reset Password ==========
+        document.getElementById("passwordForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem("access_token");
+
+            const current = document.getElementById("currentPassword").value;
+            const newPass = document.getElementById("newPassword").value;
+            const confirm = document.getElementById("confirmPassword").value;
+
+            if (newPass !== confirm) {
+                alert("كلمة المرور الجديدة غير متطابقة");
+                return;
+            }
+
+            if (newPass.length < 6) {
+                alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/ChangePassword`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        OldPassword: current,
+                        NewPassword: newPass,
+                        ConfirmPassword: confirm
+                    })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert("تم تغيير كلمة المرور بنجاح ✓");
+                    document.getElementById("passwordForm").reset();
+                } else {
+                    alert("فشل التغيير: " + (result.detail || "كلمة المرور الحالية غير صحيحة"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        });
+
+        // ========== Image Upload ==========
+        document.getElementById("imageInput").addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const token = localStorage.getItem("access_token");
+            const formData = new FormData();
+            formData.append("image", file);
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-image`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert("تم رفع الصورة بنجاح ✓");
+                    // تحديث الصورة فوراً
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        document.getElementById("userAvatar").src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    alert("فشل رفع الصورة: " + (result.detail || "حدث خطأ"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر رفع الصورة");
+            }
+        });
+
+        // ========== Load Memberships ==========
+        async function loadMemberships(token) {
+            const container = document.getElementById("membershipsList");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/membership/my`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (res.ok && Array.isArray(data.data) && data.data.length > 0) {
+                    container.innerHTML = data.data.map(item => `
+                        <div class="list-item">
+                            <div>
+                                <h4>اشتراك ${item.duration_months || ""} شهور</h4>
+                                <p>${item.Price || 0} ج.م • ${item.start_date || ""} → ${item.end_date || ""}</p>
+                            </div>
+                            <span class="badge ${item.is_active ? 'badge-active' : 'badge-expired'}">
+                                ${item.is_active ? 'ساري' : 'منتهي'}
+                            </span>
+                        </div>
+                    `).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لا توجد اشتراكات سابقة</p>`;
+                }
+            } catch (err) {
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل الاشتراكات</p>`;
+            }
+        }
+
+        // ========== Load Classes ==========
+        async function loadClasses(token) {
+            const container = document.getElementById("classesList");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/classes/my`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (res.ok && Array.isArray(data.data) && data.data.length > 0) {
+                    container.innerHTML = data.data.map(item => `
+                        <div class="list-item">
+                            <div>
+                                <h4>${item.name || item.class_name || "كلاس"}</h4>
+                                <p>${item.trainer_name || ""} • ${item.schedule || item.time || ""}</p>
+                            </div>
+                            <span class="badge badge-active">مسجل</span>
+                        </div>
+                    `).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لم تسجل في أي كلاس بعد</p>`;
+                }
+            } catch (err) {
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل الكلاسات</p>`;
+            }
+        }
+
+        // ========== Logout ==========
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+
+        // ========== Init ==========
+        (async function init() {
+            const auth = await checkAuth();
+            if (!auth) return;
+
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("navbar").style.display = "flex";
+            document.getElementById("content").style.display = "block";
+
+            // عرض الاسم من الـ check
+            document.getElementById("nav-username").textContent = `👤 ${auth.info.UserName}`;
+            document.getElementById("profileName").textContent = auth.info.UserName;
+
+            // تحميل باقي البيانات
+            await loadProfile(auth.token);
+            loadMemberships(auth.token);
+            loadClasses(auth.token);
+        })();
+    </script>
+</body>
+
+</html>

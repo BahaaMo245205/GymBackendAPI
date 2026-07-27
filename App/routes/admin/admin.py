@@ -177,26 +177,22 @@ async def get_system_reports(
     admin_role: str = Depends(ensure_admin_role),
 ):
     try:
-        # 1. إجمالي عدد المستخدمين في السيستم
         users_count_query = select(func.count(UserProfile.UserID))
         users_result = await session.execute(users_count_query)
         total_users = users_result.scalar() or 0
 
-        # 2. إجمالي عدد الحصص النشطة
         classes_count_query = select(func.count(Classes.ClassesID)).where(
             Classes.Is_active == True
         )
         classes_result = await session.execute(classes_count_query)
         total_classes = classes_result.scalar() or 0
 
-        # 3. إجمالي عدد الحجوزات النشطة
         bookings_count_query = select(func.count(Booking.BookingID)).where(
             Booking.Is_active == True
         )
         bookings_result = await session.execute(bookings_count_query)
         total_bookings = bookings_result.scalar() or 0
 
-        # 4. إجمالي الأرباح المتوقعة أو المحسوبة من الاشتراكات (مثال حسابي لو جدول الاشتراكات يحتوي على Price)
         # revenue_query = select(func.sum(Memberships.Price))
         # revenue_result = await session.execute(revenue_query)
         # total_revenue = revenue_result.scalar() or 0

@@ -19,6 +19,10 @@ tags_metadata = [
         "name": "Admins",
         "description": "صلاحيات الإدارة العليا (RBAC) للتحكم في الكباتن، الموظفين، والتقارير المالية للنظام.",
     },
+    {
+        "name": "Membership",
+        "description":"كل الاشتركات و تسجيل و الغاء تسجيل"
+    }
 ]
 
 app = FastAPI(
@@ -70,3 +74,7 @@ app.include_router(admin.router_admin)
 from App.routes.auth import auth
 
 app.include_router(auth.auth_router)
+
+from App.routes.membership import route
+
+app.include_router(route.router_membership)

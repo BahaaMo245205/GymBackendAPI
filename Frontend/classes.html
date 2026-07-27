@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرئيسية - نظام الجيم</title>
+    <title>الكلاسات - نظام الجيم</title>
     <style>
         * {
             margin: 0;
@@ -80,7 +80,6 @@
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s ease;
         }
 
         .logout-btn:hover {
@@ -89,85 +88,92 @@
 
         .main-content {
             max-width: 1100px;
-            margin: 40px auto;
-            padding: 0 20px 50px;
+            margin: 36px auto;
+            padding: 0 20px 40px;
         }
 
-        /* Hero Section */
-        .hero {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            border-radius: 20px;
-            padding: 50px 40px;
-            color: white;
-            margin-bottom: 40px;
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: 32px;
-            font-weight: 800;
-            margin-bottom: 12px;
-        }
-
-        .hero p {
-            font-size: 16px;
-            opacity: 0.95;
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.7;
-        }
-
-        /* Features */
         .section-title {
             color: #1e293b;
             font-size: 22px;
             font-weight: 700;
-            margin-bottom: 22px;
+            margin-bottom: 24px;
         }
 
-        .features-grid {
+        .classes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 22px;
-            margin-bottom: 40px;
         }
 
-        .feature-card {
+        .class-card {
             background: #ffffff;
             border-radius: 16px;
-            padding: 28px;
+            padding: 26px;
             box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
             border: 1px solid #e2e8f0;
-            transition: transform 0.2s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-        }
-
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            background: #eff6ff;
-            color: #3b82f6;
-            border-radius: 12px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            gap: 14px;
         }
 
-        .feature-card h3 {
-            font-size: 17px;
+        .class-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(59, 130, 246, 0.1);
+        }
+
+        .class-title {
+            font-size: 18px;
+            font-weight: 700;
             color: #1e293b;
-            margin-bottom: 8px;
         }
 
-        .feature-card p {
+        .class-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .class-meta span {
+            background: #f1f5f9;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .class-desc {
             font-size: 14px;
             color: #64748b;
             line-height: 1.6;
+        }
+
+        .join-btn {
+            margin-top: auto;
+            width: 100%;
+            padding: 11px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .join-btn:hover {
+            background: #2563eb;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px dashed #cbd5e1;
+            color: #64748b;
         }
 
         #loader {
@@ -187,9 +193,9 @@
         <a href="index.html" class="logo">⚡ نظام الجيم</a>
 
         <nav class="nav-links">
-            <a href="index.html" class="nav-link active">الرئيسية</a>
+            <a href="index.html" class="nav-link">الرئيسية</a>
             <a href="memberships.html" class="nav-link">الاشتراكات</a>
-            <a href="classes.html" class="nav-link">الكلاسات</a>
+            <a href="classes.html" class="nav-link active">الكلاسات</a>
             <a href="profile.html" class="nav-link">الملف الشخصي</a>
         </nav>
 
@@ -200,43 +206,8 @@
     </header>
 
     <main class="main-content" id="content" style="display: none;">
-
-        <div class="hero">
-            <h1>مرحباً بك في نظام إدارة الجيم</h1>
-            <p>
-                نظام متكامل يساعدك على إدارة اشتراكاتك، متابعة الكلاسات، 
-                وتحديث بياناتك الشخصية بكل سهولة وسرعة.
-            </p>
-        </div>
-
-        <h2 class="section-title">مميزات النظام</h2>
-
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🏋️</div>
-                <h3>باقات اشتراك متنوعة</h3>
-                <p>اختر الباقة المناسبة لك من بين عدة مدد وأسعار مختلفة مع إمكانية إضافة جهاز المشي.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">📅</div>
-                <h3>كلاسات جماعية</h3>
-                <p>تصفح جميع الكلاسات المتاحة وسجل في اللي يناسب جدولك مع أفضل المدربين.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">👤</div>
-                <h3>ملف شخصي متكامل</h3>
-                <p>حدث بياناتك، غيّر صورتك، وأعد تعيين كلمة المرور في أي وقت.</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>متابعة الاشتراكات</h3>
-                <p>اعرف حالة اشتراكك الحالي وتاريخ انتهائه وكل الاشتراكات السابقة بسهولة.</p>
-            </div>
-        </div>
-
+        <h2 class="section-title">جميع الكلاسات المتاحة</h2>
+        <div class="classes-grid" id="classesContainer"></div>
     </main>
 
     <script>
@@ -246,7 +217,7 @@
             const token = localStorage.getItem("access_token");
             if (!token) {
                 window.location.href = "login.html";
-                return;
+                return null;
             }
 
             try {
@@ -263,13 +234,69 @@
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
+                    return token;
                 } else {
                     localStorage.clear();
                     window.location.href = "login.html";
+                    return null;
+                }
+            } catch (err) {
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        async function fetchClasses(token) {
+            const container = document.getElementById("classesContainer");
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/classes/all`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                const result = await res.json();
+
+                container.innerHTML = "";
+
+                if (res.ok && Array.isArray(result.data) && result.data.length > 0) {
+                    result.data.forEach(item => {
+                        const card = document.createElement("div");
+                        card.className = "class-card";
+                        card.innerHTML = `
+                            <h3 class="class-title">${item.name || item.class_name || "كلاس"}</h3>
+                            <div class="class-meta">
+                                <span>👨‍🏫 ${item.trainer_name || "مدرب"}</span>
+                                <span>🕒 ${item.schedule || item.time || "غير محدد"}</span>
+                                <span>👥 ${item.capacity || "—"} مكان</span>
+                            </div>
+                            <p class="class-desc">${item.description || "لا يوجد وصف متاح لهذا الكلاس."}</p>
+                            <button class="join-btn" data-id="${item.id || item.ClassID}">انضم للكلاس</button>
+                        `;
+                        container.appendChild(card);
+                    });
+
+                    container.querySelectorAll(".join-btn").forEach(btn => {
+                        btn.addEventListener("click", () => {
+                            alert("تم إرسال طلب الانضمام للكلاس رقم: " + btn.dataset.id);
+                        });
+                    });
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h3>لا توجد كلاسات حالياً</h3>
+                            <p>يرجى المحاولة لاحقاً</p>
+                        </div>
+                    `;
                 }
             } catch (err) {
                 console.error(err);
-                window.location.href = "login.html";
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>حدث خطأ أثناء تحميل الكلاسات</h3>
+                    </div>
+                `;
             }
         }
 
@@ -278,7 +305,10 @@
             window.location.href = "login.html";
         });
 
-        checkAuth();
+        (async () => {
+            const token = await checkAuth();
+            if (token) fetchClasses(token);
+        })();
     </script>
 </body>
 
