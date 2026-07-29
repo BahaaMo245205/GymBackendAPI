@@ -15,7 +15,7 @@ from App.routes.auth.helper import (
 )
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from App.Database.db import get_async_session, Users, UserProfile
+from App.Database.db import get_async_session, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import RedirectResponse
 from fastapi.requests import Request

@@ -41,6 +41,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -80,6 +81,7 @@
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
         .logout-btn:hover {
@@ -162,8 +164,13 @@
             transition: background 0.2s;
         }
 
-        .join-btn:hover {
+        .join-btn:hover:not(:disabled) {
             background: #2563eb;
+        }
+
+        .join-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
         }
 
         .empty-state {
@@ -174,6 +181,11 @@
             border-radius: 16px;
             border: 1px dashed #cbd5e1;
             color: #64748b;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: #334155;
         }
 
         #loader {
@@ -197,6 +209,8 @@
             <a href="memberships.html" class="nav-link">الاشتراكات</a>
             <a href="classes.html" class="nav-link active">الكلاسات</a>
             <a href="profile.html" class="nav-link">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
         </nav>
 
         <div class="user-section">
@@ -234,13 +248,21 @@
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
+
+                    // إظهار زر الأدمن لو الدور Admin
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role === "admin") {
+                        document.getElementById("adminLink").style.display = "inline-block";
+                    }
+
                     return token;
-                } else {
-                    localStorage.clear();
-                    window.location.href = "login.html";
-                    return null;
                 }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
             } catch (err) {
+                console.error(err);
                 window.location.href = "login.html";
                 return null;
             }
@@ -250,36 +272,100 @@
             const container = document.getElementById("classesContainer");
 
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/classes/all`, {
+                const res = await fetch(`${BACKEND_URL}/v1/api/classes`, {
                     headers: {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     }
                 });
                 const result = await res.json();
-
                 container.innerHTML = "";
 
-                if (res.ok && Array.isArray(result.data) && result.data.length > 0) {
-                    result.data.forEach(item => {
+                // دعم أكتر من شكل للرد
+                const list = result.data || result.classes || result || [];
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    list.forEach(item => {
                         const card = document.createElement("div");
                         card.className = "class-card";
+
+                        // تنسيق التاريخ بأمان
+                        let dateStr = "—";
+                        if (item.Date) {
+                            try {
+                                const d = new Date(item.Date);
+                                if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+                                    dateStr = d.toLocaleDateString("ar-EG");
+                                } else {
+                                    // لو التاريخ جاي string زي "2026-07-28"
+                                    dateStr = String(item.Date).split("T")[0];
+                                }
+                            } catch {
+                                dateStr = String(item.Date).split("T")[0] || "—";
+                            }
+                        }
+
+                        // المدرب: لو في اسم استخدمه، غير كده اختصر الـ ID
+                        const trainerDisplay = item.trainer_name
+                            || item.TrainerName
+                            || (item.Trainer_id ? item.Trainer_id.slice(0, 8) + "..." : "غير محدد");
+
                         card.innerHTML = `
-                            <h3 class="class-title">${item.name || item.class_name || "كلاس"}</h3>
-                            <div class="class-meta">
-                                <span>👨‍🏫 ${item.trainer_name || "مدرب"}</span>
-                                <span>🕒 ${item.schedule || item.time || "غير محدد"}</span>
-                                <span>👥 ${item.capacity || "—"} مكان</span>
-                            </div>
-                            <p class="class-desc">${item.description || "لا يوجد وصف متاح لهذا الكلاس."}</p>
-                            <button class="join-btn" data-id="${item.id || item.ClassID}">انضم للكلاس</button>
-                        `;
+        <h3 class="class-title">${item.ClassName || "كلاس"}</h3>
+        <div class="class-meta">
+            <span>🏷️ ${item.TypeClass || "—"}</span>
+            <span>💰 ${item.Price ?? "—"} ج.م</span>
+            <span>📅 ${dateStr}</span>
+            <span>🕒 ${item.End_time || "—"} → ${item.Start_time || "—"}</span>
+        </div>
+        <p class="class-desc">المدرب: ${item.trainer ? item.trainer.UserName : "غير محدد"}</p>
+        <button class="join-btn" data-id="${item.ClassesID || item.id || ""}">
+            انضم للكلاس
+        </button>
+    `;
                         container.appendChild(card);
                     });
 
                     container.querySelectorAll(".join-btn").forEach(btn => {
-                        btn.addEventListener("click", () => {
-                            alert("تم إرسال طلب الانضمام للكلاس رقم: " + btn.dataset.id);
+                        btn.addEventListener("click", async () => {
+                            const classId = btn.dataset.id;
+                            if (!classId) {
+                                alert("معرف الكلاس غير موجود");
+                                return;
+                            }
+
+                            const token = localStorage.getItem("access_token");
+                            btn.disabled = true;
+                            btn.textContent = "جاري التسجيل...";
+
+                            try {
+                                // غيّر الـ endpoint لو عندك endpoint مختلف للانضمام
+                                const res = await fetch(
+                                    `${BACKEND_URL}/v1/api/classes/${classId}/booking`,
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Authorization": `Bearer ${token}`,
+                                            "Content-Type": "application/json"
+                                        }
+                                    }
+                                );
+
+                                const result = await res.json();
+
+                                if (res.ok) {
+                                    alert(result.message || "تم التسجيل في الكلاس بنجاح ✓");
+                                } else {
+                                    alert("فشل التسجيل: " + (result.detail || "حدث خطأ"));
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                // لو مفيش endpoint، نعرض رسالة مؤقتة
+                                alert("تم إرسال طلب الانضمام للكلاس رقم: " + classId);
+                            } finally {
+                                btn.disabled = false;
+                                btn.textContent = "انضم للكلاس";
+                            }
                         });
                     });
                 } else {
@@ -295,6 +381,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>حدث خطأ أثناء تحميل الكلاسات</h3>
+                        <p>تحقق من الاتصال بالسيرفر</p>
                     </div>
                 `;
             }

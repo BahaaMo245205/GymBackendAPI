@@ -9,12 +9,15 @@ from ...Database.db import (
     Memberships,
     get_async_session,
     UserProfile,
+    Users as Us,
     Classes,
     Booking,
+    Subscriptions,
+    
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Path
-from sqlalchemy import select, func
+from sqlalchemy import select, func,desc
 from .helper import *
 
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
@@ -54,7 +57,7 @@ async def membership_management(
         )
 
 
-@router_admin.patch("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
+@router_admin.put("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
 async def update_membership(
     membership_id: str = Path(..., title="ID الخاص بالباقة"),
     update_data: MembershipDetails = None,
@@ -117,18 +120,15 @@ async def change_user_role(
     role_data: RoleUpdateSchema,
     session: AsyncSession = Depends(get_async_session),
     admin_role: str = Depends(ensure_admin_role),
-    current_admin: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user),
 ):
-    if (
-        current_admin.get("id") == UserID
-        or current_admin.get("sub", {}).get("id") == UserID
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="عفواً، لا يمكنك تغيير صلاحيات حسابك الشخصي بهذه الطريقة!",
-        )
+    if current_user["ID"] == UserID:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="")
 
-    query = select(UserProfile).where(UserProfile.UserID == UserID)
+    if not admin_role :
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="")
+
+    query = select(Us).where(Us.UserID == UserID)
     result = await session.execute(query)
     db_user = result.scalar_one_or_none()
 
@@ -174,38 +174,60 @@ async def get_admin_role_info(current_role: str = Depends(ensure_admin_role)):
 @router_admin.get("/Reports", status_code=status.HTTP_200_OK)
 async def get_system_reports(
     session: AsyncSession = Depends(get_async_session),
-    admin_role: str = Depends(ensure_admin_role),
+    admin_role=Depends(ensure_admin_role),
 ):
     try:
-        users_count_query = select(func.count(UserProfile.UserID))
-        users_result = await session.execute(users_count_query)
+        users_result = await session.execute(select(func.count(Us.UserID)))
         total_users = users_result.scalar() or 0
 
-        classes_count_query = select(func.count(Classes.ClassesID)).where(
-            Classes.Is_active == True
+        active_subs_result = await session.execute(
+            select(func.count(Subscriptions.SubscriptionsID)).where(
+                Subscriptions.status == "active"
+            )
         )
-        classes_result = await session.execute(classes_count_query)
-        total_classes = classes_result.scalar() or 0
+        active_subscriptions = active_subs_result.scalar() or 0
 
-        bookings_count_query = select(func.count(Booking.BookingID)).where(
-            Booking.Is_active == True
+        classes_result = await session.execute(
+            select(func.count(Classes.ClassesID)).where(Classes.Is_active == True)
         )
-        bookings_result = await session.execute(bookings_count_query)
-        total_bookings = bookings_result.scalar() or 0
+        total_active_classes = classes_result.scalar() or 0
 
-        # revenue_query = select(func.sum(Memberships.Price))
-        # revenue_result = await session.execute(revenue_query)
-        # total_revenue = revenue_result.scalar() or 0
+        revenue_result = await session.execute(
+            select(func.coalesce(func.sum(Memberships.Price), 0))
+            .select_from(Subscriptions)
+            .join(Memberships, Memberships.MembershipsID == Subscriptions.membershipsID)
+        )
+        total_revenue = revenue_result.scalar() or 0
+
+        recent_query = (
+            select(Subscriptions, Us)
+            .join(Us, Us.UserID == Subscriptions.UserID)
+            .order_by(desc(Subscriptions.StartDate))
+            .limit(10)
+        )
+        recent_result = await session.execute(recent_query)
+        recent_rows = recent_result.all()
+
+        recent_subscriptions = []
+        for sub, user in recent_rows:
+            recent_subscriptions.append({
+                "UserID": sub.UserID,
+                "username": getattr(user, "UserName", None) or getattr(user, "username", None),
+                "StartDate": sub.StartDate.isoformat() if sub.StartDate else None,
+                "EndDate": sub.EndDate.isoformat() if sub.EndDate else None,
+                "status": sub.status,
+            })
 
         return {
             "status": "success",
             "message": "تم استخراج تقارير النظام بنجاح",
             "reports": {
                 "total_users": total_users,
-                "total_active_classes": total_classes,
-                "total_active_bookings": total_bookings,
-                # "total_revenue": total_revenue
+                "active_subscriptions": active_subscriptions,
+                "total_active_classes": total_active_classes,
+                "total_revenue": int(total_revenue),
             },
+            "recent_subscriptions": recent_subscriptions,
         }
 
     except Exception as e:
@@ -213,7 +235,6 @@ async def get_system_reports(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"حدث خطأ أثناء استخراج التقارير: {str(e)}",
         )
-
 
 @router_admin.patch("/users/{user_id}/status", status_code=status.HTTP_200_OK)
 async def update_user_status(
@@ -288,7 +309,7 @@ async def create_new_class(
         )
 
 
-@router_admin.patch("/classes/{class_id}", status_code=status.HTTP_200_OK)
+@router_admin.put("/classes/{class_id}", status_code=status.HTTP_200_OK)
 async def update_class(
     class_id: str,
     class_data: ClassUpdateSchema,
@@ -368,3 +389,14 @@ async def check_role(role: str = Depends(ensure_admin_role)):
         "message": "أهلاً بك يا أدمن، أنت تمتلك الصلاحيات الكاملة للتحكم في النظام.",
         "role": role,
     }
+    
+
+@router_admin.get("/GetAll/Trainers", status_code=status.HTTP_200_OK)
+async def get_all_trainers(session: AsyncSession = Depends(get_async_session)):
+    query = select(Us).where(Us.Role == "Trainer")
+    result = await session.execute(query)
+    trainers = result.scalars().all()
+    
+    return trainers
+    
+    

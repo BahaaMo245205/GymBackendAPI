@@ -7,8 +7,10 @@ from jose import jwt
 import hashlib
 import os
 
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 security_scheme = HTTPBearer()
-
 load_dotenv()
 
 
@@ -48,35 +50,36 @@ def retrieve_client_ip(request: Request) -> str:
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> str:
+) -> dict:
     token = credentials.credentials
     try:
         payload = jwt.decode(
             token,
-            str(os.getenv("SECRET_KEY")),
-            algorithms=str(os.getenv("ALGORITHM", "HS256")),
+            key=str(SECRET_KEY),
+            algorithms=[str(ALGORITHM)],
         )
-        user_id: str = payload.get("ID")
-        ipaddress: str = payload.get("ip-address")
-        
-        if (user_id == None) or (ipaddress != retrieve_client_ip(request)):
+
+        user_id = payload.get("ID")
+        user_email = payload.get("Email")
+        user_name = payload.get("UserName")
+        ipaddress = payload.get("ip-address")
+        user_role = payload.get("Role")
+
+        if user_email is None or ipaddress != retrieve_client_ip(request):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="توكن غير صالح: البيانات ناقصة.",
+                detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",
             )
 
-        return payload
+        return {
+            "ID": user_id,
+            "Email": user_email,
+            "UserName": user_name,
+            "Role": user_role,
+        }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error : {e}")
-
-    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="انتهت صلاحية التوكن، سجل دخول تاني يا بطل.",
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="التوكن ده مضروب وغير صالح! 🚨",
+            detail="التوكن غير صالح أو انتهت صلاحيته.",
         )

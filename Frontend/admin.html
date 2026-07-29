@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - الأدمن</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #fff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .nav-link.admin-active {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .username {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 8px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        .main-content {
+            max-width: 1100px;
+            margin: 36px auto;
+            padding: 0 20px 50px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .tab-btn:hover {
+            background: #cbd5e1;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 700px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 4px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #f8fafc;
+            color: #1e293b;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #3b82f6;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #15803d;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-ghost {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-ghost:hover {
+            background: #cbd5e1;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item h4 {
+            font-size: 15px;
+            color: #1e293b;
+            margin-bottom: 3px;
+        }
+
+        .list-item p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .list-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: #94a3b8;
+            padding: 24px;
+            font-size: 14px;
+        }
+
+        .edit-hint {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .edit-hint.show {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        #loader {
+            text-align: center;
+            color: #64748b;
+            margin-top: 120px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <p id="loader">جاري التحقق من الصلاحيات...</p>
+
+    <header class="navbar" id="navbar" style="display: none;">
+        <a href="index.html" class="logo">⚡ نظام الجيم</a>
+        <nav class="nav-links">
+            <a href="index.html" class="nav-link">الرئيسية</a>
+            <a href="memberships.html" class="nav-link">الاشتراكات</a>
+            <a href="classes.html" class="nav-link">الكلاسات</a>
+            <a href="profile.html" class="nav-link">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link admin-active">لوحة التحكم</a>
+        </nav>
+        <div class="user-section">
+            <span class="username" id="nav-username"></span>
+            <button id="logoutBtn" class="logout-btn">تسجيل الخروج</button>
+        </div>
+    </header>
+
+    <main class="main-content" id="content" style="display: none;">
+        <h1 class="page-title">لوحة تحكم الأدمن</h1>
+        <p class="page-subtitle">إدارة الاشتراكات، الكلاسات، وعرض التقارير</p>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="membership">الاشتراكات</button>
+            <button class="tab-btn" data-tab="class">الكلاسات</button>
+            <button class="tab-btn" data-tab="reports">التقارير</button>
+        </div>
+
+        <!-- ========== Membership Tab ========== -->
+        <div class="tab-content active" id="tab-membership">
+            <div class="card">
+                <h3 class="section-title" id="membershipFormTitle">إضافة باقة اشتراك جديدة</h3>
+                <div class="edit-hint" id="membershipEditHint">وضع التعديل — عدّل البيانات ثم اضغط حفظ</div>
+                <form id="membershipForm">
+                    <input type="hidden" id="mEditId" value="">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>المدة (بالشهور)</label>
+                            <input type="number" id="mDuration" min="1" required placeholder="مثال: 3">
+                        </div>
+                        <div class="form-group">
+                            <label>السعر (ج.م)</label>
+                            <input type="number" id="mPrice" min="0" required placeholder="مثال: 500">
+                        </div>
+                        <div class="form-group">
+                            <label>جهاز المشي</label>
+                            <select id="mWalk">
+                                <option value="true">متاح</option>
+                                <option value="false">غير متاح</option>
+                            </select>
+                        </div>
+                        <div class="form-group full">
+                            <label>الوصف</label>
+                            <textarea id="mDesc" placeholder="وصف الباقة..."></textarea>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button type="submit" class="btn btn-primary" id="btnAddMembership">إضافة الباقة</button>
+                        <button type="button" class="btn btn-ghost" id="btnCancelMembershipEdit"
+                            style="display:none;">إلغاء التعديل</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="section-title">كل باقات الاشتراك</h3>
+                <div id="membershipsList">
+                    <p class="empty-msg">جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== Class Tab ========== -->
+        <div class="tab-content" id="tab-class">
+            <div class="card">
+                <h3 class="section-title" id="classFormTitle">إضافة كلاس جديد</h3>
+                <div class="edit-hint" id="classEditHint">وضع التعديل — عدّل البيانات ثم اضغط حفظ</div>
+                <form id="classForm">
+                    <input type="hidden" id="cEditId" value="">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>اسم الكلاس</label>
+                            <input type="text" id="cName" required placeholder="مثال: يوجا صباحي">
+                        </div>
+                        <div class="form-group">
+                            <label>نوع الكلاس</label>
+                            <input type="text" id="cType" required placeholder="مثال: Fitness / Yoga">
+                        </div>
+                        <div class="form-group">
+                            <label>اختر المدرب</label>
+                            <select id="cTrainer" required>
+                                <option value="">جاري تحميل المدربين...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>السعر (ج.م)</label>
+                            <input type="number" id="cPrice" min="1" required placeholder="150">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ الكلاس</label>
+                            <input type="date" id="cDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>وقت البداية</label>
+                            <input type="time" id="cStartTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>وقت النهاية</label>
+                            <input type="time" id="cEndTime" required>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button type="submit" class="btn btn-success" id="btnAddClass">إضافة الكلاس</button>
+                        <button type="button" class="btn btn-ghost" id="btnCancelClassEdit" style="display:none;">إلغاء
+                            التعديل</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3 class="section-title">كل الكلاسات</h3>
+                <div id="classesList">
+                    <p class="empty-msg">جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== Reports Tab ========== -->
+        <div class="tab-content" id="tab-reports">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="number" id="statUsers">—</div>
+                    <div class="label">إجمالي المستخدمين</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statSubs">—</div>
+                    <div class="label">الاشتراكات النشطة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statClasses">—</div>
+                    <div class="label">عدد الكلاسات</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statRevenue">—</div>
+                    <div class="label">الإيرادات التقريبية</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="section-title">آخر الاشتراكات</h3>
+                <div id="recentSubs">
+                    <p class="empty-msg">اضغط على تبويب التقارير للتحميل</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+
+        // ========== Auth ==========
+        async function checkAuth() {
+            const token = localStorage.getItem("access_token");
+            if (!token) { window.location.href = "login.html"; return null; }
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.Info) {
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role !== "admin") {
+                        alert("هذه الصفحة مخصصة للأدمن فقط");
+                        window.location.href = "index.html";
+                        return null;
+                    }
+                    document.getElementById("nav-username").textContent = `👤 ${data.Info.UserName}`;
+                    document.getElementById("loader").style.display = "none";
+                    document.getElementById("navbar").style.display = "flex";
+                    document.getElementById("content").style.display = "block";
+                    return token;
+                }
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
+            } catch (err) {
+                console.error(err);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        // ========== Tabs ==========
+        document.querySelectorAll(".tab-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+                btn.classList.add("active");
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+
+                const token = localStorage.getItem("access_token");
+                if (btn.dataset.tab === "membership") loadMembershipsList(token);
+                if (btn.dataset.tab === "class") loadClassesList(token);
+                if (btn.dataset.tab === "reports") loadReports();
+            });
+        });
+
+        // ========== Trainers ==========
+        async function loadTrainers(token, selectedId = "") {
+            const select = document.getElementById("cTrainer");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/GetAll/Trainers`, {
+                    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+                });
+                const trainers = await res.json();
+                const list = Array.isArray(trainers) ? trainers : (trainers.data || trainers.trainers || []);
+                select.innerHTML = `<option value="">اختر المدرب</option>`;
+
+                if (res.ok && list.length > 0) {
+                    list.forEach(t => {
+                        const name = t.UserName || t.username || t.Email || "مدرب";
+                        const id = t.UserID || t.id || "";
+                        const opt = document.createElement("option");
+                        opt.value = id;
+                        opt.textContent = name;
+                        if (id && id === selectedId) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = `<option value="">لا يوجد مدربين</option>`;
+                }
+            } catch (err) {
+                console.error(err);
+                select.innerHTML = `<option value="">تعذر تحميل المدربين</option>`;
+            }
+        }
+
+        // ========== Memberships List ==========
+        async function loadMembershipsList(token) {
+            const container = document.getElementById("membershipsList");
+            container.innerHTML = `<p class="empty-msg">جاري التحميل...</p>`;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/membership/all`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const result = await res.json();
+                const list = result.data || result.memberships || (Array.isArray(result) ? result : []);
+
+                if (res.ok && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const id = item.MembershipsID || item.id;
+                        return `
+                            <div class="list-item">
+                                <div>
+                                    <h4>${item.duration_months || "—"} شهور — ${item.Price ?? item.price ?? 0} ج.م</h4>
+                                    <p>${item.description || "بدون وصف"} • مشي: ${item.walk_machine ? "متاح" : "غير متاح"}</p>
+                                </div>
+                                <div class="list-actions">
+                                    <button class="btn btn-warning btn-sm" onclick='editMembership(${JSON.stringify(item).replace(/'/g, "&#39;")})'>تعديل</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteMembership('${id}')">حذف</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لا توجد باقات</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر التحميل</p>`;
+            }
+        }
+
+        function editMembership(item) {
+            document.getElementById("mEditId").value = item.MembershipsID || item.id || "";
+            document.getElementById("mDuration").value = item.duration_months || "";
+            document.getElementById("mPrice").value = item.Price ?? item.price ?? "";
+            document.getElementById("mWalk").value = item.walk_machine ? "true" : "false";
+            document.getElementById("mDesc").value = item.description || "";
+
+            document.getElementById("membershipFormTitle").textContent = "تعديل باقة الاشتراك";
+            document.getElementById("btnAddMembership").textContent = "حفظ التعديلات";
+            document.getElementById("btnCancelMembershipEdit").style.display = "inline-block";
+            document.getElementById("membershipEditHint").classList.add("show");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetMembershipForm() {
+            document.getElementById("membershipForm").reset();
+            document.getElementById("mEditId").value = "";
+            document.getElementById("membershipFormTitle").textContent = "إضافة باقة اشتراك جديدة";
+            document.getElementById("btnAddMembership").textContent = "إضافة الباقة";
+            document.getElementById("btnCancelMembershipEdit").style.display = "none";
+            document.getElementById("membershipEditHint").classList.remove("show");
+        }
+
+        document.getElementById("btnCancelMembershipEdit").addEventListener("click", resetMembershipForm);
+
+        document.getElementById("membershipForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem("access_token");
+            const btn = document.getElementById("btnAddMembership");
+            const editId = document.getElementById("mEditId").value;
+
+            const body = {
+                duration_months: Number(document.getElementById("mDuration").value),
+                Price: Number(document.getElementById("mPrice").value),
+                walk_machine: document.getElementById("mWalk").value === "true",
+                description: document.getElementById("mDesc").value || ""
+            };
+
+            btn.disabled = true;
+            btn.textContent = editId ? "جاري الحفظ..." : "جاري الإضافة...";
+
+            try {
+                const url = editId
+                    ? `${BACKEND_URL}/v1/api/admin/memberships/${editId}`
+                    : `${BACKEND_URL}/v1/api/admin/memberships`;
+
+                const res = await fetch(url, {
+                    method: editId ? "PUT" : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert(editId ? "تم التعديل بنجاح ✓" : "تم الإضافة بنجاح ✓");
+                    resetMembershipForm();
+                    loadMembershipsList(token);
+                } else {
+                    alert("فشل العملية: " + (result.detail || JSON.stringify(result)));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = editId ? "حفظ التعديلات" : "إضافة الباقة";
+            }
+        });
+
+        async function deleteMembership(id) {
+            if (!id || !confirm("هل أنت متأكد من حذف هذه الباقة؟")) return;
+            const token = localStorage.getItem("access_token");
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/memberships/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const result = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert("تم الحذف بنجاح ✓");
+                    loadMembershipsList(token);
+                } else {
+                    alert("فشل الحذف: " + (result.detail || "حدث خطأ"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        }
+
+        // ========== Classes List ==========
+        async function loadClassesList(token) {
+            const container = document.getElementById("classesList");
+            container.innerHTML = `<p class="empty-msg">جاري التحميل...</p>`;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/classes`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const result = await res.json();
+                const list = result.data || result.classes || (Array.isArray(result) ? result : []);
+
+                if (res.ok && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const id = item.ClassesID || item.id;
+                        const dateStr = item.Date ? String(item.Date).split("T")[0] : "—";
+                        return `
+                            <div class="list-item">
+                                <div>
+                                    <h4>${item.ClassName || "كلاس"} — ${item.Price ?? 0} ج.م</h4>
+                                    <p>${item.TypeClass || ""} • ${dateStr} • ${item.Start_time || ""} → ${item.End_time || ""}</p>
+                                </div>
+                                <div class="list-actions">
+                                    <button class="btn btn-warning btn-sm" onclick='editClass(${JSON.stringify(item).replace(/'/g, "&#39;")})'>تعديل</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteClass('${id}')">حذف</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لا توجد كلاسات</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر التحميل</p>`;
+            }
+        }
+
+        function editClass(item) {
+            document.getElementById("cEditId").value = item.ClassesID || item.id || "";
+            document.getElementById("cName").value = item.ClassName || "";
+            document.getElementById("cType").value = item.TypeClass || "";
+            document.getElementById("cPrice").value = item.Price ?? "";
+            document.getElementById("cDate").value = item.Date ? String(item.Date).split("T")[0] : "";
+            document.getElementById("cStartTime").value = item.Start_time || "";
+            document.getElementById("cEndTime").value = item.End_time || "";
+
+            const token = localStorage.getItem("access_token");
+            loadTrainers(token, item.Trainer_id || "");
+
+            document.getElementById("classFormTitle").textContent = "تعديل الكلاس";
+            document.getElementById("btnAddClass").textContent = "حفظ التعديلات";
+            document.getElementById("btnCancelClassEdit").style.display = "inline-block";
+            document.getElementById("classEditHint").classList.add("show");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function resetClassForm() {
+            document.getElementById("classForm").reset();
+            document.getElementById("cEditId").value = "";
+            document.getElementById("classFormTitle").textContent = "إضافة كلاس جديد";
+            document.getElementById("btnAddClass").textContent = "إضافة الكلاس";
+            document.getElementById("btnCancelClassEdit").style.display = "none";
+            document.getElementById("classEditHint").classList.remove("show");
+            loadTrainers(localStorage.getItem("access_token"));
+        }
+
+        document.getElementById("btnCancelClassEdit").addEventListener("click", resetClassForm);
+
+        document.getElementById("classForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem("access_token");
+            const btn = document.getElementById("btnAddClass");
+            const editId = document.getElementById("cEditId").value;
+            const trainerSelect = document.getElementById("cTrainer");
+
+            if (!trainerSelect.value) {
+                alert("الرجاء اختيار المدرب");
+                return;
+            }
+
+            const body = {
+                ClassName: document.getElementById("cName").value,
+                TypeClass: document.getElementById("cType").value,
+                Price: Number(document.getElementById("cPrice").value),
+                Date: document.getElementById("cDate").value,
+                Start_time: document.getElementById("cStartTime").value,
+                End_time: document.getElementById("cEndTime").value,
+                Trainer_id: trainerSelect.value
+            };
+
+            btn.disabled = true;
+            btn.textContent = editId ? "جاري الحفظ..." : "جاري الإضافة...";
+
+            try {
+                const url = editId
+                    ? `${BACKEND_URL}/v1/api/admin/classes/${editId}`
+                    : `${BACKEND_URL}/v1/api/admin/classes`;
+
+                const res = await fetch(url, {
+                    method: editId ? "PUT" : "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert(editId ? "تم التعديل بنجاح ✓" : "تم الإضافة بنجاح ✓");
+                    resetClassForm();
+                    loadClassesList(token);
+                } else {
+                    alert("فشل العملية: " + (result.detail || JSON.stringify(result)));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = editId ? "حفظ التعديلات" : "إضافة الكلاس";
+            }
+        });
+
+        async function deleteClass(id) {
+            if (!id || !confirm("هل أنت متأكد من حذف هذا الكلاس؟")) return;
+            const token = localStorage.getItem("access_token");
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/classes/${id}`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const result = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert("تم الحذف بنجاح ✓");
+                    loadClassesList(token);
+                } else {
+                    alert("فشل الحذف: " + (result.detail || "حدث خطأ"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        }
+
+        // ========== Reports ==========
+        async function loadReports() {
+            const token = localStorage.getItem("access_token");
+            const container = document.getElementById("recentSubs");
+            container.innerHTML = `<p class="empty-msg">جاري التحميل...</p>`;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/Reports`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("statUsers").textContent = data.reports?.total_users ?? "—";
+                    document.getElementById("statSubs").textContent = data.reports?.active_subscriptions ?? "—";
+                    document.getElementById("statClasses").textContent = data.reports?.total_active_classes ?? "—";
+                    document.getElementById("statRevenue").textContent =
+                        data.reports?.total_revenue != null
+                            ? `${data.reports.total_revenue} ج.م`
+                            : "—";
+
+                    const list = data.recent_subscriptions || data.subscriptions || [];
+                    if (list.length > 0) {
+                        container.innerHTML = list.map(item => {
+                            const start = item.StartDate ? new Date(item.StartDate).toLocaleDateString("ar-EG") : "—";
+                            const end = item.EndDate ? new Date(item.EndDate).toLocaleDateString("ar-EG") : "—";
+                            return `
+                                <div class="list-item">
+                                    <div>
+                                        <h4>${item.username || item.UserID || "مستخدم"}</h4>
+                                        <p>${start} → ${end}</p>
+                                    </div>
+                                    <span style="font-size:13px;color:#64748b">${item.status || ""}</span>
+                                </div>
+                            `;
+                        }).join("");
+                    } else {
+                        container.innerHTML = `<p class="empty-msg">لا توجد اشتراكات حديثة</p>`;
+                    }
+                } else {
+                    ["statUsers", "statSubs", "statClasses", "statRevenue"].forEach(id => {
+                        document.getElementById(id).textContent = "—";
+                    });
+                    container.innerHTML = `<p class="empty-msg">لا يوجد endpoint للتقارير حالياً</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل التقارير</p>`;
+            }
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+
+        // ========== Init ==========
+        (async () => {
+            const token = await checkAuth();
+            if (token) {
+                loadTrainers(token);
+                loadMembershipsList(token);
+            }
+        })();
+    </script>
+</body>
+
+</html>

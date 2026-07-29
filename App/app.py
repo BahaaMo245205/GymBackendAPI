@@ -1,8 +1,10 @@
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
-from App.Database.db import create_db_and_table
 from fastapi.middleware.cors import CORSMiddleware
-
+from App.Database.db import create_db_and_table
+from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from pathlib import Path
+import logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,29 +15,37 @@ async def lifespan(app: FastAPI):
 tags_metadata = [
     {
         "name": "Auth",
-        "description": "عمليات تسجيل الدخول والتحقق من الهوية وتوليد الـ JWT Tokens لحماية النظام.",
+        "description": "تسجيل الدخول، التسجيل، والتحقق من الهوية باستخدام JWT.",
+    },
+    {
+        "name": "User",
+        "description": "الملف الشخصي، تحديث البيانات، تغيير كلمة المرور، والحجوزات.",
     },
     {
         "name": "Admins",
-        "description": "صلاحيات الإدارة العليا (RBAC) للتحكم في الكباتن، الموظفين، والتقارير المالية للنظام.",
+        "description": "صلاحيات الإدارة: التقارير، المدربين، إدارة الاشتراكات والكلاسات.",
     },
     {
         "name": "Membership",
-        "description":"كل الاشتركات و تسجيل و الغاء تسجيل"
-    }
+        "description": "عرض الباقات، الاشتراك، وإدارة اشتراكات المستخدم.",
+    },
+    {
+        "name": "Classes",
+        "description": "عرض الكلاسات، الإنضمام، وإدارة الحصص الرياضية.",
+    },
 ]
-
 app = FastAPI(
     title="سيستم إدارة الجيم الاحترافي 🏋️‍♂️ REST API",
     description="""
-هذا الـ API هو المحرك الخلفي الرئيسي لإدارة الصالات الرياضية، الاشتراكات، وحضور الكابتن واللاعبين بصلاحيات أمنية متكاملة.
+الـ Backend الرئيسي لإدارة الصالات الرياضية، الاشتراكات، الكلاسات، والمستخدمين.
 
-## الميزات الحالية:
-* **حماية مشددة:** تأمين كامل للمسارات باستخدام OAuth2 و JWT Tokens لمنع التلاعب بالاشتراكات.
-* **إدارة ذكية لقواعد البيانات:** معمارية بيانات مرنة للتحكم في الكباتن، اللاعبين، وتتبع باقات الاشتراك الحالية.
-* **أداء عالي وسريع:** معالجة البيانات بكفاءة عالية تدعم التوسع الفوري للأنظمة.
+### الميزات:
+- حماية المسارات بـ JWT + Bearer Auth
+- إدارة الاشتراكات والكلاسات
+- تقارير للأدمن
+- صلاحيات حسب الدور (User / Trainer / Admin)
 """,
-    summary="الباك-إند الرئيسي لنظام إدارة الجيم والاشتراكات المتكامل",
+    summary="Backend لنظام إدارة الجيم والاشتراكات",
     version="1.0.0",
     terms_of_service="https://bahaadevs.com/gym-terms/",
     contact={
@@ -58,6 +68,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+BASE_DIR = Path(__file__).resolve().parent
+static_profiles = BASE_DIR  / "static"
+
+app.mount("/static", StaticFiles(directory=str(static_profiles)), name="static")
+
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s",filemode='a',filename='app.log')
+logger = logging.getLogger(__name__)
 
 from App.routes.classes import classes_router
 

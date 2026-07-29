@@ -29,18 +29,23 @@ class Users(Base):
     email = Column(String(45), nullable=False, unique=True)
     password = Column(String(160), nullable=False)
     Role = Column(String(45), nullable=False, default="User")
+    profile_image = Column(String(255), nullable=True)
     profile = relationship(
         "UserProfile",
         back_populates="author",
         cascade="all, delete-orphan",
         uselist=False,
     )
+    classes = relationship(
+        "Classes", back_populates="trainer", cascade="all, delete-orphan"
+    )
 
-    def __init__(self, username, email, password, role):
+    def __init__(self, username, email, password, role, profile_image=None):
         self.UserName = username
         self.email = email
         self.password = password
         self.Role = role
+        self.profile_image = profile_image
 
 
 class UserProfile(Base):
@@ -117,6 +122,8 @@ class Classes(Base):
     End_time = Column(String(60), nullable=False)
     Trainer_id = Column(String(60), ForeignKey("users.UserID"), nullable=False)
     Is_active = Column(Boolean, nullable=False, default=True)
+
+    trainer = relationship("Users", back_populates="classes", foreign_keys=[Trainer_id])
 
     def __init__(
         self,

@@ -89,15 +89,19 @@
             transition: background 0.2s ease, transform 0.1s ease;
         }
 
-        button:hover {
+        button:hover:not(:disabled) {
             background: #2563eb;
         }
 
-        button:active {
+        button:active:not(:disabled) {
             transform: scale(0.98);
         }
 
-        /* تنسيق الفاصل (أو) */
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
         .divider {
             display: flex;
             align-items: center;
@@ -107,7 +111,8 @@
             font-size: 13px;
         }
 
-        .divider::before, .divider::after {
+        .divider::before,
+        .divider::after {
             content: '';
             flex: 1;
             border-bottom: 1px solid #e2e8f0;
@@ -121,7 +126,6 @@
             margin-right: 10px;
         }
 
-        /* تنسيق زر جوجل */
         .google-btn {
             width: 100%;
             padding: 12px;
@@ -137,16 +141,12 @@
             justify-content: center;
             gap: 12px;
             transition: all 0.2s ease;
+            margin-top: 0;
         }
 
         .google-btn:hover {
             background: #f8fafc;
             border-color: #cbd5e1;
-        }
-
-        .google-btn img {
-            width: 20px;
-            height: 20px;
         }
 
         .register-link {
@@ -185,7 +185,6 @@
 
         <div class="divider">أو</div>
 
-        <!-- زر تسجيل الدخول بواسطة جوجل -->
         <button type="button" id="googleLoginBtn" class="google-btn">
             <svg width="20" height="20" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -207,22 +206,30 @@
         const btnLogin = document.getElementById("loginBtn");
         const googleLoginBtn = document.getElementById("googleLoginBtn");
 
-        if (localStorage.getItem("access_token")) {
-            const response = fetch(`${BACKEND_URL}/v1/api/auth/check`, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`
-                }
-            });
-            response.then(response => {
-                if (response.ok) {
+        // لو المستخدم مسجل دخول بالفعل → روح للرئيسية
+        (async function checkExistingSession() {
+            const token = localStorage.getItem("access_token");
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (res.ok) {
                     window.location.href = "index.html";
+                } else {
+                    localStorage.clear();
                 }
-            });
-
-
-        }
+            } catch (err) {
+                // لو السيرفر مش شغال، نسيب المستخدم في صفحة اللوجين
+                console.error(err);
+            }
+        })();
 
         async function handleLogin() {
             const email = emailInput.value.trim();
@@ -233,27 +240,23 @@
                 return;
             }
 
-            const userData = {
-                email: email,
-                password: password
-            };
-
             try {
                 btnLogin.disabled = true;
                 btnLogin.textContent = "جاري الدخول...";
 
-                let response = await fetch(`${BACKEND_URL}/v1/api/auth/login`, {
+                const response = await fetch(`${BACKEND_URL}/v1/api/auth/login`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(userData)
+                    body: JSON.stringify({ email, password })
                 });
 
-                let result = await response.json();
+                const result = await response.json();
 
                 if (response.ok) {
                     localStorage.setItem("access_token", result.access_token);
+
                     if (result.refresh_token) {
                         localStorage.setItem("refresh_token", result.refresh_token);
                     }
@@ -274,17 +277,16 @@
             }
         }
 
-        // حدث النقر لزر الدخول العادي
         btnLogin.addEventListener("click", handleLogin);
 
         passwordInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") handleLogin();
         });
+
         emailInput.addEventListener("keypress", (e) => {
             if (e.key === "Enter") handleLogin();
         });
 
-        // حدث النقر لزر تسجيل الدخول بواسطة جوجل (يوجه للراوت الخاص بـ OAuth في الباك إند)
         googleLoginBtn.addEventListener("click", () => {
             window.location.href = `${BACKEND_URL}/v1/api/auth/loginGoogle`;
         });

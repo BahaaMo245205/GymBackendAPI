@@ -41,6 +41,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -80,6 +81,7 @@
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
         .logout-btn:hover {
@@ -221,8 +223,13 @@
             transition: background 0.2s;
         }
 
-        .subscribe-btn:hover {
+        .subscribe-btn:hover:not(:disabled) {
             background: #2563eb;
+        }
+
+        .subscribe-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
         }
 
         .empty-state {
@@ -233,6 +240,11 @@
             border-radius: 16px;
             border: 1px dashed #cbd5e1;
             color: #64748b;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: #334155;
         }
 
         #loader {
@@ -256,6 +268,8 @@
             <a href="memberships.html" class="nav-link active">الاشتراكات</a>
             <a href="classes.html" class="nav-link">الكلاسات</a>
             <a href="profile.html" class="nav-link">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
         </nav>
 
         <div class="user-section">
@@ -293,13 +307,21 @@
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
+
+                    // إظهار زر الأدمن لو الدور Admin
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role === "admin") {
+                        document.getElementById("adminLink").style.display = "inline-block";
+                    }
+
                     return token;
-                } else {
-                    localStorage.clear();
-                    window.location.href = "login.html";
-                    return null;
                 }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
             } catch (err) {
+                console.error(err);
                 window.location.href = "login.html";
                 return null;
             }
@@ -318,37 +340,77 @@
                 const result = await res.json();
                 container.innerHTML = "";
 
-                if (res.ok && Array.isArray(result.data) && result.data.length > 0) {
-                    result.data.forEach(item => {
-                        const hasWalk = item.walk_machine === true;
+                // دعم أكتر من شكل للرد
+                const list = result.data || result.memberships || result || [];
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    list.forEach(item => {
+                        const hasWalk = item.walk_machine === true || item.walk_machine === "true";
 
                         const card = document.createElement("div");
                         card.className = "membership-card";
                         card.innerHTML = `
                             <div class="card-header">
                                 <h3 class="membership-title">اشتراك جيم</h3>
-                                <span class="duration-badge">${item.duration_months} شهور</span>
+                                <span class="duration-badge">${item.duration_months || "—"} شهور</span>
                             </div>
-                            <div class="membership-price">${item.Price} <span>ج.م</span></div>
+                            <div class="membership-price">${item.Price ?? item.price ?? 0} <span>ج.م</span></div>
                             <p class="membership-desc">${item.description || "استمتع بكافة أجهزة الجيم والدخول الحر طوال فترة الاشتراك."}</p>
                             <div class="features">
-                                <div class="feature-item ${hasWalk ? 'available' : 'unavailable'}">
-                                    <span class="icon">${hasWalk ? '✓' : '✕'}</span>
-                                    <span>جهاز المشي ${hasWalk ? 'متاح' : 'غير متاح'}</span>
+                                <div class="feature-item ${hasWalk ? "available" : "unavailable"}">
+                                    <span class="icon">${hasWalk ? "✓" : "✕"}</span>
+                                    <span>جهاز المشي ${hasWalk ? "متاح" : "غير متاح"}</span>
                                 </div>
                                 <div class="feature-item available">
                                     <span class="icon">✓</span>
                                     <span>دخول حر طوال المدة</span>
                                 </div>
                             </div>
-                            <button class="subscribe-btn" data-id="${item.MembershipsID}">اشتراك الآن</button>
+                            <button class="subscribe-btn" data-id="${item.MembershipsID || item.id}">اشتراك الآن</button>
                         `;
                         container.appendChild(card);
                     });
 
+                    // الاشتراك الحقيقي
                     container.querySelectorAll(".subscribe-btn").forEach(btn => {
-                        btn.addEventListener("click", () => {
-                            alert("تم إرسال طلب الاشتراك للباقة رقم: " + btn.dataset.id);
+                        btn.addEventListener("click", async () => {
+                            const membershipId = btn.dataset.id;
+                            if (!membershipId) {
+                                alert("معرف الباقة غير موجود");
+                                return;
+                            }
+
+                            const token = localStorage.getItem("access_token");
+                            btn.disabled = true;
+                            btn.textContent = "جاري الاشتراك...";
+
+                            try {
+                                const res = await fetch(
+                                    `${BACKEND_URL}/v1/api/membership/subscription/${membershipId}`,
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Authorization": `Bearer ${token}`,
+                                            "Content-Type": "application/json",
+                                            "accept": "application/json"
+                                        }
+                                    }
+                                );
+
+                                const result = await res.json();
+
+                                if (res.ok) {
+                                    alert(result.message || "تم الاشتراك بنجاح يا بطل! 🏋️‍♂️");
+                                } else {
+                                    alert("فشل الاشتراك: " + (result.detail || "حدث خطأ ما"));
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                alert("تعذر الاتصال بالسيرفر");
+                            } finally {
+                                btn.disabled = false;
+                                btn.textContent = "اشتراك الآن";
+                            }
                         });
                     });
                 } else {
@@ -364,6 +426,7 @@
                 container.innerHTML = `
                     <div class="empty-state">
                         <h3>حدث خطأ أثناء تحميل الاشتراكات</h3>
+                        <p>تحقق من الاتصال بالسيرفر</p>
                     </div>
                 `;
             }

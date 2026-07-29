@@ -12,3 +12,5 @@ Explain Codes/
 .venv
 .env
 *.json
+alembic.ini
+app.log

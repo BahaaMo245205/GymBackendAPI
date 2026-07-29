@@ -1,15 +1,21 @@
 from ...Database.db import get_async_session, Classes, Users, UserProfile, Booking
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from .helper import get_current_user_id
 from sqlalchemy import select
-from .helper import *
+from datetime import datetime
 
 classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 
 
 @classes_router.get("/", status_code=status.HTTP_200_OK)
 async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
-    query = select(Classes).where(Classes.Is_active == True)
+    query = (
+        select(Classes)
+        .where(Classes.Is_active == True)
+        .options(selectinload(Classes.trainer))
+    )
     result = await session.execute(query)
     all_classes = result.scalars().all()
 
@@ -22,10 +28,10 @@ async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
     return {"status": "success", "count": len(all_classes), "data": all_classes}
 
 
-@classes_router.post("/{class_id}/book", status_code=status.HTTP_201_CREATED)
+@classes_router.post("/{class_id}/booking", status_code=status.HTTP_201_CREATED)
 async def book_class(
-    class_id: str,  
-    current_user_id: str = Depends(get_current_user_id),
+    class_id: str,
+    current_user_id: dict = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_async_session),
 ):
     class_query = select(Classes).where(
@@ -41,7 +47,7 @@ async def book_class(
         )
 
     existing_booking_query = select(Booking).where(
-        Booking.UserID == current_user_id, Booking.ClassID == class_id
+        Booking.UserID == current_user_id.get("ID"), Booking.ClassID == class_id
     )
     existing_result = await session.execute(existing_booking_query)
     already_booked = existing_result.scalar_one_or_none()
@@ -52,7 +58,12 @@ async def book_class(
             detail="أنت مسجل بالفعل في هذه الحصة مسبقاً!",
         )
 
-    new_booking = Booking(UserID=current_user_id, ClassesID=class_id, Is_active=True)
+    new_booking = Booking(
+        userid=current_user_id.get("ID"),
+        classid=class_id,
+        is_active=True,
+        date=datetime.now(),
+    )
 
     try:
         session.add(new_booking)

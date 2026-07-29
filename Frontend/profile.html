@@ -18,7 +18,6 @@
             min-height: 100vh;
         }
 
-        /* Navbar */
         .navbar {
             background: #ffffff;
             padding: 14px 28px;
@@ -42,6 +41,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -88,7 +88,6 @@
             background: #dc2626;
         }
 
-        /* Main Layout */
         .main-content {
             max-width: 1100px;
             margin: 36px auto;
@@ -102,7 +101,6 @@
             margin-bottom: 18px;
         }
 
-        /* Profile Header Card */
         .profile-header {
             background: #ffffff;
             border-radius: 16px;
@@ -198,7 +196,6 @@
             color: #334155;
         }
 
-        /* Grid Layout */
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -212,7 +209,6 @@
             }
         }
 
-        /* Cards */
         .card {
             background: #ffffff;
             border-radius: 16px;
@@ -285,7 +281,6 @@
             width: 100%;
         }
 
-        /* Lists */
         .list-item {
             display: flex;
             justify-content: space-between;
@@ -346,7 +341,6 @@
 
     <p id="loader">جاري تحميل الملف الشخصي...</p>
 
-    <!-- Navbar -->
     <header class="navbar" id="navbar" style="display: none;">
         <a href="index.html" class="logo">⚡ نظام الجيم</a>
 
@@ -355,6 +349,8 @@
             <a href="memberships.html" class="nav-link">الاشتراكات</a>
             <a href="classes.html" class="nav-link">الكلاسات</a>
             <a href="profile.html" class="nav-link active">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
         </nav>
 
         <div class="user-section">
@@ -365,7 +361,6 @@
 
     <main class="main-content" id="content" style="display: none;">
 
-        <!-- Profile Header -->
         <div class="profile-header">
             <div class="avatar-wrapper">
                 <img src="" alt="صورة المستخدم" class="avatar" id="userAvatar"
@@ -388,10 +383,7 @@
             </div>
         </div>
 
-        <!-- Forms Grid -->
         <div class="grid-2">
-
-            <!-- Update Info -->
             <div class="card">
                 <h3 class="section-title">تعديل البيانات الشخصية</h3>
                 <form id="updateForm">
@@ -419,7 +411,6 @@
                 </form>
             </div>
 
-            <!-- Reset Password -->
             <div class="card">
                 <h3 class="section-title">تغيير كلمة المرور</h3>
                 <form id="passwordForm">
@@ -440,7 +431,6 @@
             </div>
         </div>
 
-        <!-- Memberships History -->
         <div class="card" style="margin-bottom: 28px;">
             <h3 class="section-title">اشتراكاتي السابقة والحالية</h3>
             <div id="membershipsList">
@@ -448,7 +438,6 @@
             </div>
         </div>
 
-        <!-- Classes -->
         <div class="card">
             <h3 class="section-title">الكلاسات المسجل فيها</h3>
             <div id="classesList">
@@ -462,7 +451,7 @@
         const BACKEND_URL = "http://localhost:8000";
         let currentUser = null;
 
-        // ========== Authentication ==========
+        // ========== Auth ==========
         async function checkAuth() {
             const token = localStorage.getItem("access_token");
             if (!token) {
@@ -480,12 +469,16 @@
                 const data = await res.json();
 
                 if (res.ok && data.Info) {
+                    // حفظ الـ user_id لو موجود
+                    if (data.Info.UserID || data.Info.IdUser || data.Info.id) {
+                        localStorage.setItem("user_id", data.Info.UserID || data.Info.IdUser || data.Info.id);
+                    }
                     return { token, info: data.Info };
-                } else {
-                    localStorage.clear();
-                    window.location.href = "login.html";
-                    return null;
                 }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
             } catch (err) {
                 console.error(err);
                 window.location.href = "login.html";
@@ -496,7 +489,6 @@
         // ========== Load Profile ==========
         async function loadProfile(token) {
             try {
-                // جلب بيانات المستخدم التفصيلية
                 const res = await fetch(`${BACKEND_URL}/v1/api/user/me`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
@@ -504,10 +496,10 @@
 
                 if (res.ok) {
                     currentUser = data;
+                    if (data.UserID || data.IdUser || data.id) {
+                        localStorage.setItem("user_id", data.UserID || data.IdUser || data.id);
+                    }
                     renderProfile(data);
-                } else {
-                    // لو الـ endpoint مختلف، نستخدم بيانات الـ check
-                    console.warn("Profile endpoint failed, using basic info");
                 }
             } catch (err) {
                 console.error("Error loading profile:", err);
@@ -515,23 +507,26 @@
         }
 
         function renderProfile(user) {
-            // الصورة
             const avatar = document.getElementById("userAvatar");
-            if (user.image && user.image !== "string") {
-                avatar.src = user.image.startsWith("http") ? user.image : `${BACKEND_URL}${user.image}`;
+
+            if (user.profile_image) {
+                avatar.src = user.profile_image.startsWith("http")
+                    ? user.profile_image
+                    : `${BACKEND_URL}/static/profiles/${user.profile_image}`;
+            } else if (user.image && user.image !== "string") {
+                avatar.src = user.image.startsWith("http")
+                    ? user.image
+                    : `${BACKEND_URL}${user.image}`;
             }
 
-            // الاسم والدور
             const userName = user.UserName || user.username || "مستخدم";
             document.getElementById("profileName").textContent = userName;
             document.getElementById("nav-username").textContent = `👤 ${userName}`;
 
             const roleBadge = document.getElementById("roleBadge");
-            const role = (user.Role || "User").toLowerCase();
+            const role = (user.Role || user["user-role"] || "User").toString().toLowerCase();
 
-            roleBadge.textContent = user.Role || "User";
             roleBadge.className = "role-badge ";
-
             if (role === "admin") {
                 roleBadge.classList.add("role-admin");
                 roleBadge.textContent = "مدير النظام";
@@ -543,25 +538,32 @@
                 roleBadge.textContent = "مستخدم عادي";
             }
 
-            // استخراج بيانات البروفایل (سواء كانت مدمجة مباشرة أو داخل كائن Profile الفرعي)
             const profileData = user.Profile || user;
 
-            // عرض البيانات في الصفحة
             document.getElementById("infoAge").textContent = profileData.Age || "—";
-            document.getElementById("infoGender").textContent = profileData.Gender === "Male" ? "ذكر" : profileData.Gender === "Female" ? "أنثى" : (profileData.Gender || "—");
+            document.getElementById("infoGender").textContent =
+                profileData.Gender === "Male" ? "ذكر" :
+                    profileData.Gender === "Female" ? "أنثى" :
+                        (profileData.Gender || "—");
             document.getElementById("infoPhone").textContent = profileData.Phone || profileData.phone || "—";
             document.getElementById("infoAddress").textContent = profileData.Address || "—";
 
-            // ملء حقول الفورم للتعديل
             document.getElementById("inputAge").value = profileData.Age || "";
             document.getElementById("inputGender").value = profileData.Gender || "";
             document.getElementById("inputPhone").value = profileData.Phone || profileData.phone || "";
             document.getElementById("inputAddress").value = profileData.Address || "";
         }
+
         // ========== Update Info ==========
         document.getElementById("updateForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const token = localStorage.getItem("access_token");
+            const userid = localStorage.getItem("user_id");
+
+            // if (!userid) {
+            //     alert("لم يتم العثور على معرف المستخدم");
+            //     return;
+            // }
 
             const body = {
                 Age: Number(document.getElementById("inputAge").value) || 0,
@@ -571,7 +573,6 @@
             };
 
             try {
-                const userid = localStorage.getItem("user_id");
                 const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update?IdUser=${userid}`, {
                     method: "PUT",
                     headers: {
@@ -595,7 +596,7 @@
             }
         });
 
-        // ========== Reset Password ==========
+        // ========== Change Password ==========
         document.getElementById("passwordForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const token = localStorage.getItem("access_token");
@@ -608,7 +609,6 @@
                 alert("كلمة المرور الجديدة غير متطابقة");
                 return;
             }
-
             if (newPass.length < 6) {
                 alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
                 return;
@@ -647,16 +647,17 @@
             const file = e.target.files[0];
             if (!file) return;
 
+
+
             const token = localStorage.getItem("access_token");
             const formData = new FormData();
-            formData.append("image", file);
+            formData.append("file", file);  // نفس اسم الباراميتر في FastAPI
 
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-image`, {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-profile-image`, {
                     method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    },
+                    headers: { "Authorization": `Bearer ${token}` },
+                    // متضيفش Content-Type يدوي مع FormData
                     body: formData
                 });
 
@@ -664,12 +665,21 @@
 
                 if (res.ok) {
                     alert("تم رفع الصورة بنجاح ✓");
-                    // تحديث الصورة فوراً
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        document.getElementById("userAvatar").src = ev.target.result;
-                    };
-                    reader.readAsDataURL(file);
+
+                    // عرض فوري من السيرفر
+                    if (result.image_url) {
+                        document.getElementById("userAvatar").src =
+                            result.image_url.startsWith("http")
+                                ? result.image_url
+                                : `${BACKEND_URL}${result.image_url}`;
+                    } else {
+                        // fallback معاينة محلية
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            document.getElementById("userAvatar").src = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
                 } else {
                     alert("فشل رفع الصورة: " + (result.detail || "حدث خطأ"));
                 }
@@ -682,28 +692,41 @@
         // ========== Load Memberships ==========
         async function loadMemberships(token) {
             const container = document.getElementById("membershipsList");
+
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/membership/my`, {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/subscriptions`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const data = await res.json();
+                const list = data.subscriptions || data.data || [];
 
-                if (res.ok && Array.isArray(data.data) && data.data.length > 0) {
-                    container.innerHTML = data.data.map(item => `
-                        <div class="list-item">
-                            <div>
-                                <h4>اشتراك ${item.duration_months || ""} شهور</h4>
-                                <p>${item.Price || 0} ج.م • ${item.start_date || ""} → ${item.end_date || ""}</p>
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const isActive = (item.status || "").toLowerCase() === "active";
+                        const start = item.StartDate
+                            ? new Date(item.StartDate).toLocaleDateString("ar-EG")
+                            : "—";
+                        const end = item.EndDate
+                            ? new Date(item.EndDate).toLocaleDateString("ar-EG")
+                            : "—";
+
+                        return `
+                            <div class="list-item">
+                                <div>
+                                    <h4>اشتراك #${(item.SubscriptionsID || "").slice(0, 8)}</h4>
+                                    <p>${start} → ${end}</p>
+                                </div>
+                                <span class="badge ${isActive ? "badge-active" : "badge-expired"}">
+                                    ${isActive ? "ساري" : "منتهي"}
+                                </span>
                             </div>
-                            <span class="badge ${item.is_active ? 'badge-active' : 'badge-expired'}">
-                                ${item.is_active ? 'ساري' : 'منتهي'}
-                            </span>
-                        </div>
-                    `).join("");
+                        `;
+                    }).join("");
                 } else {
                     container.innerHTML = `<p class="empty-msg">لا توجد اشتراكات سابقة</p>`;
                 }
             } catch (err) {
+                console.error(err);
                 container.innerHTML = `<p class="empty-msg">تعذر تحميل الاشتراكات</p>`;
             }
         }
@@ -711,26 +734,40 @@
         // ========== Load Classes ==========
         async function loadClasses(token) {
             const container = document.getElementById("classesList");
+
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/classes/my`, {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/bookings`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 const data = await res.json();
 
-                if (res.ok && Array.isArray(data.data) && data.data.length > 0) {
-                    container.innerHTML = data.data.map(item => `
-                        <div class="list-item">
-                            <div>
-                                <h4>${item.name || item.class_name || "كلاس"}</h4>
-                                <p>${item.trainer_name || ""} • ${item.schedule || item.time || ""}</p>
-                            </div>
-                            <span class="badge badge-active">مسجل</span>
+                const list = data.bookings || [];
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const dateStr = item.Date
+                            ? new Date(item.Date).toLocaleDateString("ar-EG")
+                            : "—";
+
+                        const timeStr = (item.Start_time && item.End_time)
+                            ? `${item.Start_time} → ${item.End_time}`
+                            : "";
+
+                        return `
+                    <div class="list-item">
+                        <div>
+                            <h4>${item.ClassName || "كلاس"}</h4>
+                            <p>${item.TypeClass || ""} • ${dateStr} ${timeStr ? "• " + timeStr : ""}</p>
                         </div>
-                    `).join("");
+                        <span class="badge badge-active">مسجل</span>
+                    </div>
+                `;
+                    }).join("");
                 } else {
                     container.innerHTML = `<p class="empty-msg">لم تسجل في أي كلاس بعد</p>`;
                 }
             } catch (err) {
+                console.error(err);
                 container.innerHTML = `<p class="empty-msg">تعذر تحميل الكلاسات</p>`;
             }
         }
@@ -750,11 +787,15 @@
             document.getElementById("navbar").style.display = "flex";
             document.getElementById("content").style.display = "block";
 
-            // عرض الاسم من الـ check
             document.getElementById("nav-username").textContent = `👤 ${auth.info.UserName}`;
             document.getElementById("profileName").textContent = auth.info.UserName;
 
-            // تحميل باقي البيانات
+            // إظهار زر الأدمن
+            const role = (auth.info.Role || auth.info["user-role"] || "").toString().toLowerCase();
+            if (role === "admin") {
+                document.getElementById("adminLink").style.display = "inline-block";
+            }
+
             await loadProfile(auth.token);
             loadMemberships(auth.token);
             loadClasses(auth.token);

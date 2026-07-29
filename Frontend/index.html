@@ -41,6 +41,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
         .nav-link {
@@ -93,7 +94,6 @@
             padding: 0 20px 50px;
         }
 
-        /* Hero Section */
         .hero {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             border-radius: 20px;
@@ -117,7 +117,6 @@
             line-height: 1.7;
         }
 
-        /* Features */
         .section-title {
             color: #1e293b;
             font-size: 22px;
@@ -191,6 +190,8 @@
             <a href="memberships.html" class="nav-link">الاشتراكات</a>
             <a href="classes.html" class="nav-link">الكلاسات</a>
             <a href="profile.html" class="nav-link">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
         </nav>
 
         <div class="user-section">
@@ -204,7 +205,7 @@
         <div class="hero">
             <h1>مرحباً بك في نظام إدارة الجيم</h1>
             <p>
-                نظام متكامل يساعدك على إدارة اشتراكاتك، متابعة الكلاسات، 
+                نظام متكامل يساعدك على إدارة اشتراكاتك، متابعة الكلاسات،
                 وتحديث بياناتك الشخصية بكل سهولة وسرعة.
             </p>
         </div>
@@ -263,6 +264,12 @@
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
+
+                    // إظهار زر الأدمن لو الدور Admin
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role === "admin") {
+                        document.getElementById("adminLink").style.display = "inline-block";
+                    }
                 } else {
                     localStorage.clear();
                     window.location.href = "login.html";
@@ -273,6 +280,7 @@
             }
         }
 
+        // تسجيل الخروج
         document.getElementById("logoutBtn").addEventListener("click", () => {
             localStorage.clear();
             window.location.href = "login.html";

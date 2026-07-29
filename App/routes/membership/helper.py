@@ -1,40 +1,19 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException, Depends, status
 from fastapi.requests import Request
 from dotenv import load_dotenv
+from jose import jwt, JWTError
 from typing import Annotated
-# from ...app import logger
-from jose import jwt
 import hashlib
 import os
-
-security_scheme = HTTPBearer()
 
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def generate_password_hash(password: Annotated[str, None]) -> str:
-    """Create password hash"""
-    if not password:
-        raise HTTPException(501, "Error hash password")
-
-    hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    return hash_password
-
-
-def validate_password(hashedPassword: str, password: str) -> bool:
-    if not hashedPassword and not password:
-        raise HTTPException(501, "Error Chick password")
-
-    hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    if hashedPassword == hash_password:
-        return True
-
-    return False
+security_scheme = HTTPBearer()
 
 
 def retrieve_client_ip(request: Request) -> str:
@@ -50,10 +29,10 @@ def retrieve_client_ip(request: Request) -> str:
     return request.client.host
 
 
-def get_current_user_id(
+def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> str:
+) -> dict:
     token = credentials.credentials
     try:
         payload = jwt.decode(
@@ -84,5 +63,13 @@ def get_current_user_id(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"التوكن غير صالح أو انتهت صلاحيته.",
+            detail="التوكن غير صالح أو انتهت صلاحيته.",
         )
+
+
+def get_current_user_id(get_current_user: dict = Depends(get_current_user)) -> str:
+    if not get_current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    return get_current_user.get("ID")

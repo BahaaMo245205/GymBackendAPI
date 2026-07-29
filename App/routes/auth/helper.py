@@ -24,6 +24,7 @@ def generate_password_hash(password: Annotated[str, None]) -> str:
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
     return hash_password
 
+
 def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
         raise HTTPException(501, "Error Chick password")
@@ -40,6 +41,7 @@ def create_reset_token(gmail: str | dict) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=10)
     to_encode = {"exp": expire, "sub": gmail, "action": "reset_password"}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
 
 def verify_reset_token(token) -> str | None:
     """This functions for check JWT token & resetting passwords"""
@@ -68,6 +70,7 @@ def create_access_token(data: dict) -> str | None:
 
     return access_token, refresh_token
 
+
 def retrieve_client_ip(request: Request) -> str:
 
     x_forwarded_for = request.headers.get("X-Forwarded-For")
@@ -79,6 +82,7 @@ def retrieve_client_ip(request: Request) -> str:
         x_real_ip.split(",")[0].strip()
 
     return request.client.host
+
 
 def get_current_user(
     request: Request,
@@ -108,7 +112,7 @@ def get_current_user(
             "ID": user_id,
             "Email": user_email,
             "UserName": user_name,
-            "Role": user_role
+            "Role": user_role,
         }
 
     except Exception as e:
