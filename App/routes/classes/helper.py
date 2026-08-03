@@ -3,7 +3,7 @@ from fastapi import HTTPException, Depends, status
 from fastapi.requests import Request
 from dotenv import load_dotenv
 from typing import Annotated
-# from ...app import logger
+from ...app import logger
 from jose import jwt
 import hashlib
 import os
@@ -15,26 +15,6 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-
-def generate_password_hash(password: Annotated[str, None]) -> str:
-    """Create password hash"""
-    if not password:
-        raise HTTPException(501, "Error hash password")
-
-    hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    return hash_password
-
-
-def validate_password(hashedPassword: str, password: str) -> bool:
-    if not hashedPassword and not password:
-        raise HTTPException(501, "Error Chick password")
-
-    hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    if hashedPassword == hash_password:
-        return True
-
-    return False
 
 
 def retrieve_client_ip(request: Request) -> str:
@@ -82,6 +62,7 @@ def get_current_user_id(
         }
 
     except Exception as e:
+        logger.error("هناك مشكله في JWT Token : {}".format(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"التوكن غير صالح أو انتهت صلاحيته.",

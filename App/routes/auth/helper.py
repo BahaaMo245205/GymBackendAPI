@@ -1,38 +1,48 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException, Depends, status
+from passlib.context import CryptContext
 from fastapi.requests import Request
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from typing import Annotated
+from ...app import logger
 import hashlib
 import os
-
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 security_scheme = HTTPBearer()
-
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def generate_password_hash(password: Annotated[str, None]) -> str:
     """Create password hash"""
     if not password:
+        logger.error("خطأ في كلمة المرور")
         raise HTTPException(501, "Error hash password")
 
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    # hash_password = pwd_context.hash(hash_password)
+    logger.info("تم أنشاء الكلمة المرور بنجاح")
     return hash_password
 
 
 def validate_password(hashedPassword: str, password: str) -> bool:
     if not hashedPassword and not password:
+        logger.error("خطأ في كلمة المرور")
         raise HTTPException(501, "Error Chick password")
 
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
     if hashedPassword == hash_password:
         return True
+    
+    # hash_password = pwd_context.hash(hash_password)
+    # if pwd_context.verify(hash_password, hashedPassword):
+    #     return True
 
+    logger.error("🚨 كلمة المرور غير صحيحة!")
     return False
 
 
@@ -51,6 +61,7 @@ def verify_reset_token(token) -> str | None:
             return None
         return payload.get("sub")
     except JWTError:
+        logger.error("🚨 الرابط غير صالح أو انتهت صلاحيته!")
         return None
 
 
@@ -116,6 +127,7 @@ def get_current_user(
         }
 
     except Exception as e:
+        logger.error("هناك مشكله في JWT Token : {}".format(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="التوكن غير صالح أو انتهت صلاحيته.",

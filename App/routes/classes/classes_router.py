@@ -1,16 +1,27 @@
-from ...Database.db import get_async_session, Classes, Users, UserProfile, Booking
+from ...Database.db import get_async_session, Classes, Booking
 from fastapi import APIRouter, status, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from .helper import get_current_user_id
+from ...app import logger, redis_client
 from sqlalchemy import select
 from datetime import datetime
+import json
 
 classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 
 
 @classes_router.get("/", status_code=status.HTTP_200_OK)
 async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
+    cash_key = "all_classes"
+    cash = await redis_client.get(cash_key)
+    if cash:
+        logger.info("تم تحميل جميع الكلاسات بنجاح من Redis")
+        return {
+            "status": "success",
+            "classes": json.loads(cash),
+        }
+
     query = (
         select(Classes)
         .where(Classes.Is_active == True)
@@ -20,11 +31,27 @@ async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
     all_classes = result.scalars().all()
 
     if not all_classes:
+        logger.warning("لا يوجد اي كلاسات متاحة حالياً في الجيم")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="عفواً، لا توجد أي حصص تدريبية متاحة حالياً في الجيم.",
         )
-
+    get_all_class = [
+        {
+            "ClassesID": c.ClassesID,
+            "ClassName": c.ClassName,
+            "Date": str(c.Date),
+            "End_time": c.End_time,
+            "Start_time": c.Start_time,
+            "Price": c.Price,
+            "Trainer_id": c.Trainer_id,
+            "Is_active": c.Is_active,
+            "TypeClass": c.TypeClass,
+        }
+        for c in all_classes
+    ]
+    logger.info("جلب جميع الكلاسات بنجاح")
+    await redis_client.set(cash_key, json.dumps(get_all_class), ex=3600)
     return {"status": "success", "count": len(all_classes), "data": all_classes}
 
 
@@ -34,6 +61,9 @@ async def book_class(
     current_user_id: dict = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_async_session),
 ):
+    cash_key = "user:bookings:" + current_user_id.get("ID")
+    await redis_client.delete(cash_key)
+
     class_query = select(Classes).where(
         Classes.ClassesID == class_id, Classes.Is_active == True
     )
@@ -69,7 +99,7 @@ async def book_class(
         session.add(new_booking)
         await session.commit()
         await session.refresh(new_booking)
-
+        logger.info("تم إتمام الحجز بنجاح")
         return {
             "status": "success",
             "message": "تم حجز الحصة بنجاح",
@@ -79,6 +109,7 @@ async def book_class(
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"حدث خطأ أثناء إتمام الحجز: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"حدث خطأ أثناء إتمام الحجز: {str(e)}",
@@ -112,6 +143,7 @@ async def cancel_class_booking(
 
         await session.commit()
 
+        logger.info("تم إلغاء الحجز بنجاح")
         return {
             "status": "success",
             "message": "تم إلغاء حجز الحصة بنجاح وتحرير مكانك.",

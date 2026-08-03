@@ -30,6 +30,8 @@ class Users(Base):
     password = Column(String(160), nullable=False)
     Role = Column(String(45), nullable=False, default="User")
     profile_image = Column(String(255), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+
     profile = relationship(
         "UserProfile",
         back_populates="author",
@@ -63,7 +65,6 @@ class UserProfile(Base):
     Address = Column(Text, nullable=False)
     gender = Column(String(45), nullable=False)
     Age = Column(Integer, nullable=False)
-    is_active = Column(Boolean, nullable=False, default=True)
 
     author = relationship("Users", back_populates="profile")
 

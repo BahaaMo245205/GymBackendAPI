@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تغيير الصلاحيات - الأدمن</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f4f7fb; min-height: 100vh; }
+
+        .navbar {
+            background: #fff; padding: 14px 28px; display: flex; justify-content: space-between;
+            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000;
+        }
+        .navbar .logo { font-size: 20px; font-weight: 700; color: #3b82f6; text-decoration: none; }
+        .nav-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .nav-link {
+            color: #64748b; text-decoration: none; font-size: 14px; font-weight: 600;
+            padding: 8px 14px; border-radius: 8px;
+        }
+        .nav-link:hover { color: #3b82f6; background: #eff6ff; }
+        .nav-link.admin-active { background: #fef3c7; color: #d97706; }
+        .user-section { display: flex; align-items: center; gap: 14px; }
+        .username { color: #1e293b; font-size: 14px; font-weight: 600; }
+        .logout-btn {
+            padding: 8px 14px; background: #ef4444; color: white; border: none;
+            border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+
+        .main-content { max-width: 900px; margin: 36px auto; padding: 0 20px 50px; }
+        .page-title { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
+        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+
+        .card {
+            background: #fff; border-radius: 16px; padding: 24px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px;
+        }
+
+        .search-box {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        .search-box input {
+            flex: 1; min-width: 200px; padding: 11px 14px; border: 1.5px solid #e2e8f0;
+            border-radius: 10px; font-size: 14px; background: #f8fafc; outline: none;
+        }
+        .search-box input:focus { border-color: #3b82f6; background: #fff; }
+
+        .user-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap;
+        }
+        .user-row:last-child { border-bottom: none; }
+        .user-info h4 { font-size: 15px; color: #1e293b; margin-bottom: 4px; }
+        .user-info p { font-size: 13px; color: #64748b; }
+
+        .role-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 12px; font-weight: 700;
+        }
+        .role-user { background: #eff6ff; color: #3b82f6; }
+        .role-trainer { background: #f0fdf4; color: #16a34a; }
+        .role-admin { background: #fef3c7; color: #d97706; }
+
+        .role-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .role-actions select {
+            padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+            font-size: 13px; background: #f8fafc; outline: none;
+        }
+        .btn {
+            padding: 8px 14px; border: none; border-radius: 8px; font-size: 13px;
+            font-weight: 600; cursor: pointer;
+        }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .empty-msg { text-align: center; color: #94a3b8; padding: 30px; font-size: 14px; }
+        #loader { text-align: center; color: #64748b; margin-top: 120px; font-size: 16px; }
+    </style>
+</head>
+
+<body>
+    <p id="loader">جاري التحقق من الصلاحيات...</p>
+
+    <header class="navbar" id="navbar" style="display:none;">
+        <a href="index.html" class="logo">⚡ نظام الجيم</a>
+        <nav class="nav-links">
+            <a href="index.html" class="nav-link">الرئيسية</a>
+            <a href="admin.html" class="nav-link">لوحة التحكم</a>
+            <a href="change-role.html" class="nav-link admin-active">تغيير الصلاحيات</a>
+            <a href="profile.html" class="nav-link">الملف الشخصي</a>
+        </nav>
+        <div class="user-section">
+            <span class="username" id="nav-username"></span>
+            <button id="logoutBtn" class="logout-btn">تسجيل الخروج</button>
+        </div>
+    </header>
+
+    <main class="main-content" id="content" style="display:none;">
+        <h1 class="page-title">تغيير صلاحيات المستخدمين</h1>
+        <p class="page-subtitle">اختر مستخدم وحدد الدور الجديد (User / Trainer / Admin)</p>
+
+        <div class="card">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="ابحث بالاسم أو الإيميل...">
+            </div>
+            <div id="usersList">
+                <p class="empty-msg">جاري تحميل المستخدمين...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+        let allUsers = [];
+
+        async function checkAuth() {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return null;
+            }
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                const data = await res.json();
+
+                if (res.ok && data.Info) {
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role !== "admin") {
+                        alert("هذه الصفحة مخصصة للأدمن فقط");
+                        window.location.href = "index.html";
+                        return null;
+                    }
+                    document.getElementById("nav-username").textContent = `👤 ${data.Info.UserName}`;
+                    document.getElementById("loader").style.display = "none";
+                    document.getElementById("navbar").style.display = "flex";
+                    document.getElementById("content").style.display = "block";
+                    return token;
+                }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
+            } catch (err) {
+                console.error(err);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        function roleBadge(role) {
+            const r = (role || "User").toString().toLowerCase();
+            if (r === "admin") return `<span class="role-badge role-admin">Admin</span>`;
+            if (r === "trainer") return `<span class="role-badge role-trainer">Trainer</span>`;
+            return `<span class="role-badge role-user">User</span>`;
+        }
+
+        function renderUsers(users) {
+            const container = document.getElementById("usersList");
+
+            if (!users.length) {
+                container.innerHTML = `<p class="empty-msg">لا يوجد مستخدمين</p>`;
+                return;
+            }
+
+            container.innerHTML = users.map(u => {
+                const id = u.UserID || u.id;
+                const name = u.UserName || u.username || "—";
+                const email = u.Email || u.email || "—";
+                const role = u.Role || u.role || "User";
+
+                return `
+                    <div class="user-row" data-id="${id}">
+                        <div class="user-info">
+                            <h4>${name} ${roleBadge(role)}</h4>
+                            <p>${email}</p>
+                        </div>
+                        <div class="role-actions">
+                            <select id="role-${id}">
+                                <option value="User" ${role === "User" ? "selected" : ""}>User</option>
+                                <option value="Trainer" ${role === "Trainer" ? "selected" : ""}>Trainer</option>
+                                <option value="Admin" ${role === "Admin" ? "selected" : ""}>Admin</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="changeRole('${id}')">حفظ</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        async function loadUsers(token) {
+            const container = document.getElementById("usersList");
+            container.innerHTML = `<p class="empty-msg">جاري التحميل...</p>`;
+
+            try {
+                // غيّر الـ endpoint لو مختلف عندك
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/users`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                allUsers = data.users || data.data || (Array.isArray(data) ? data : []);
+                renderUsers(allUsers);
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل المستخدمين</p>`;
+            }
+        }
+
+        async function changeRole(userId) {
+            const token = localStorage.getItem("access_token");
+            const select = document.getElementById(`role-${userId}`);
+            const newRole = select.value;
+
+            if (!confirm(`تأكيد تغيير الصلاحية إلى: ${newRole}؟`)) return;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/admin/ChangeRole/${userId}`, {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ new_role: newRole })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert(result.message || "تم تغيير الصلاحية بنجاح ✓");
+                    loadUsers(token);
+                } else {
+                    alert("فشل التغيير: " + (result.detail || "حدث خطأ"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        }
+
+        document.getElementById("searchInput").addEventListener("input", (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            if (!q) {
+                renderUsers(allUsers);
+                return;
+            }
+            const filtered = allUsers.filter(u => {
+                const name = (u.UserName || u.username || "").toLowerCase();
+                const email = (u.Email || u.email || "").toLowerCase();
+                return name.includes(q) || email.includes(q);
+            });
+            renderUsers(filtered);
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+
+        (async () => {
+            const token = await checkAuth();
+            if (token) loadUsers(token);
+        })();
+    </script>
+</body>
+</html>

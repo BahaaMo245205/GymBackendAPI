@@ -1,12 +1,11 @@
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from datetime import datetime, timezone, timedelta
 from fastapi import HTTPException, Depends, status
 from fastapi.requests import Request
 from dotenv import load_dotenv
-from jose import jwt, JWTError
-from typing import Annotated
-import hashlib
+from ...app import logger
+from jose import jwt
 import os
+
 
 load_dotenv()
 
@@ -61,6 +60,7 @@ def get_current_user(
         }
 
     except Exception as e:
+        logger.error("التوكن غير صالح أو انتهت صلاحيته.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="التوكن غير صالح أو انتهت صلاحيته.",

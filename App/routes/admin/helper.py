@@ -3,6 +3,7 @@ from fastapi import HTTPException, Depends, status
 from ..auth.helper import get_current_user
 from fastapi.requests import Request
 from dotenv import load_dotenv
+from ...app import logger
 from jose import jwt
 import os
 
@@ -34,6 +35,7 @@ def get_current_user(
         user_role = payload.get("Role")
 
         if user_email is None or ipaddress != retrieve_client_ip(request):
+            logger.warning("توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",
@@ -47,6 +49,7 @@ def get_current_user(
         }
 
     except Exception as e:
+        logger.error("{}".format(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="التوكن غير صالح أو انتهت صلاحيته.",
@@ -69,6 +72,7 @@ def ensure_admin_role(current_user: dict = Depends(get_current_user)) -> str:
     user_id = current_user.get("ID")
 
     if user_role != "Admin" and user_id != ADMINID:
+        logger.error("هذا المسار مخصص للأدمن فقط! {}".format(user_id))
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="عفواً.. هذا المسار مخصص للأدمن فقط!",
@@ -76,14 +80,3 @@ def ensure_admin_role(current_user: dict = Depends(get_current_user)) -> str:
 
     return True
 
-
-# def ensure_trainer_role(current_user: dict = Depends(get_current_user)) -> str:
-#     user_role = current_user.get("Role")
-
-#     if user_role != "Trainer":
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="عفواً.. هذا المسار مخصص للمدربين فقط!",
-#         )
-
-#     return user_role

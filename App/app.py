@@ -2,14 +2,45 @@ from fastapi.middleware.cors import CORSMiddleware
 from App.Database.db import create_db_and_table
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from App.redis_client import redis_client
 from fastapi import FastAPI
 from pathlib import Path
 import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - (%(levelname)s)-> %(message)s",
+    filemode="a",
+    filename="app.log",
+    encoding="utf-8",
+)
+logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global redis_client
+
+    logger.info("Starting up and connecting to services...")
+
     await create_db_and_table()
+    try:
+        await redis_client.ping()
+        logger.info("Successfully connected to Redis! 🟢")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+
+    logger.info("Running app smoothly...")
+
     yield
+
+    logger.info("Shutting down and cleaning up...")
+
+    if redis_client:
+        await redis_client.close()
+        logger.info("Redis connection closed. 🔴")
+
+    logger.info("App shutdown complete.")
 
 
 tags_metadata = [
@@ -70,13 +101,10 @@ app.add_middleware(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
-static_profiles = BASE_DIR  / "static"
+static_profiles = BASE_DIR / "static"
 
 app.mount("/static", StaticFiles(directory=str(static_profiles)), name="static")
 
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s",filemode='a',filename='app.log')
-logger = logging.getLogger(__name__)
 
 from App.routes.classes import classes_router
 

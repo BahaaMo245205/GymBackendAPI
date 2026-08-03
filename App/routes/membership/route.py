@@ -5,26 +5,67 @@ from ...Database.db import (
 )
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from ...redis_client import redis_client
 from datetime import datetime, timedelta
 from .helper import get_current_user_id
 from sqlalchemy import select
+from ...app import logger
+import json
 
 router_membership = APIRouter(prefix="/v1/api/membership", tags=["Membership"])
 
 
 @router_membership.get("/all", status_code=status.HTTP_200_OK)
 async def get_memberships(session: AsyncSession = Depends(get_async_session)):
+    cashed_key = "all_memberships"
+
+    try:
+        cashed = await redis_client.get(cashed_key)
+        if cashed:
+            logger.info("تم تحميل جميع الاشتراكات بنجاح من Redis ")
+            memberships_data = json.loads(cashed)
+            logger.info("جلب الاشتركات من Redis")
+            return {
+                "status": "success",
+                "count": len(memberships_data),
+                "memberships": memberships_data,
+            }
+    except Exception as e:
+        logger.error(f"Redis get error: {e}")
+
     query = select(Memberships).where(Memberships.is_active == 1)
     result = await session.execute(query)
     all_memberships = result.scalars().all()
 
     if not all_memberships:
+        logger.info("لا يوجد اي أشتركات")
         raise HTTPException(
             detail="لا يوجد اي أشتركات", status_code=status.HTTP_404_NOT_FOUND
         )
 
-    return {"status": "success", "count": len(all_memberships), "data": all_memberships}
 
+    memberships_list = [
+        {
+            "id": m.MembershipsID,          
+            "price": m.Price,       
+            "duration_months": m.duration_months,
+            "walk_machine": m.walk_machine,
+            "is_active": m.is_active
+        } 
+        for m in all_memberships
+    ]
+
+    try:
+        await redis_client.set(cashed_key, json.dumps(memberships_list), ex=300)
+    except Exception as e:
+        logger.error(f"Redis set error: {e}")
+
+    logger.info("تم جلب جميع الاشتراكات بنجاح من الداتابيز 🗄️")
+    return {
+        "status": "success", 
+        "count": len(all_memberships), 
+        "memberships": memberships_list
+    }
 
 @router_membership.post("/subscription/{id}", status_code=status.HTTP_201_CREATED)
 async def create_subscription(
@@ -32,11 +73,13 @@ async def create_subscription(
     session: AsyncSession = Depends(get_async_session),
     user_id: str = Depends(get_current_user_id),
 ):
+    await redis_client.delete("user:subscriptions:" + user_id)
     query = select(Memberships).where(Memberships.MembershipsID == id)
     result = await session.execute(query)
     memberships_db = result.scalar_one_or_none()
 
     if not memberships_db:
+        logger.info("الباقة المطلوبة غير موجوده.")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="الباقة المطلوبة غير موجوده."
         )
@@ -52,6 +95,7 @@ async def create_subscription(
     await session.commit()
     await session.refresh(add_subscription)
 
+    logger.info(f"تم الاشتراك بنجاح يا بطل! 🏋️‍♂️ لي مستخدم {user_id}")
     return {
         "message": "تم الاشتراك بنجاح يا بطل! 🏋️‍♂️",
         "subscription_id": add_subscription.SubscriptionsID,

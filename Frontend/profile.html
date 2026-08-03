@@ -558,7 +558,6 @@
         document.getElementById("updateForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const token = localStorage.getItem("access_token");
-            const userid = localStorage.getItem("user_id");
 
             // if (!userid) {
             //     alert("لم يتم العثور على معرف المستخدم");
@@ -573,7 +572,7 @@
             };
 
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update?IdUser=${userid}`, {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update`, {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
@@ -651,7 +650,7 @@
 
             const token = localStorage.getItem("access_token");
             const formData = new FormData();
-            formData.append("file", file);  // نفس اسم الباراميتر في FastAPI
+            formData.append("file", file); 
 
             try {
                 const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-profile-image`, {

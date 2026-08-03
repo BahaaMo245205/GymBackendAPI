@@ -13,7 +13,8 @@ Gunicorn
 aiomysql
 alembic
 pymysql
+stripe
 bcrypt
-mysql
 redis
+mysql
 httpx

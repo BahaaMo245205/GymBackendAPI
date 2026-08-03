@@ -23,12 +23,14 @@ from fastapi import (
 )
 from App.routes.users.model import ChangePassword, InformationUser
 from sqlalchemy.ext.asyncio import AsyncSession
-from dotenv import load_dotenv
+from ...app import logger, redis_client
 from sqlalchemy import select, update
+from dotenv import load_dotenv
 from typing import Annotated
 from pathlib import Path
 from jose import jwt
 import datetime
+import json
 import uuid
 import os
 
@@ -41,8 +43,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent 
-UPLOAD_DIR = BASE_DIR  / "static" / "profiles"
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+UPLOAD_DIR = BASE_DIR / "static" / "profiles"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
@@ -53,42 +55,76 @@ async def ProfileUser(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    user_id = current_user.get("ID")
+    user_id = current_user.get("ID") or current_user.get("UserID")
+    cache_key = f"user:profile:{user_id}"
 
-    query = select(UserProfile).where(UserProfile.UserID == user_id)
-    result = await session.execute(query)
-    db_userprofile = result.scalar_one_or_none()
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            logger.info(
+                f"Profile cache hit | user_id={user_id}, cache_key={cache_key} , {cached}"
+            )
+            return json.loads(cached)
 
-    if not db_userprofile:
-        return {
+        query = select(UserProfile).where(UserProfile.UserID == user_id)
+        result = await session.execute(query)
+        db_userprofile = result.scalar_one_or_none()
+
+        query_image = select(Users).where(Users.UserID == user_id)
+        result_image = await session.execute(query_image)
+        db_image = result_image.scalar_one_or_none()
+
+        if not db_userprofile:
+            payload = {
+                "UserName": current_user.get("UserName"),
+                "Gmail": current_user.get("Email"),
+                "Role": current_user.get("Role") or current_user.get("user-role"),
+                "profile_image": db_image.profile_image if db_image else None,
+                "Profile": None,
+            }
+            await redis_client.set(cache_key, json.dumps(payload), ex=3600)
+            return payload
+
+        payload = {
             "UserName": current_user.get("UserName"),
             "Gmail": current_user.get("Email"),
-            "Profile": None,
+            "Role": current_user.get("Role") or current_user.get("user-role"),
+            "profile_image": db_image.profile_image if db_image else None,
+            "Is_active": db_image.is_active,
+            "Profile": {
+                "Age": db_userprofile.Age,
+                "Phone": db_userprofile.Phone,
+                "Address": db_userprofile.Address,
+                "Gender": db_userprofile.gender,
+            },
         }
 
-    return {
-        "UserName": current_user.get("UserName"),
-        "Gmail": current_user.get("Email"),
-        "Role": current_user.get("Role"),
-        "Profile": {
-            "Age": db_userprofile.Age,
-            "Phone": db_userprofile.Phone,
-            "Address": db_userprofile.Address,
-            "Gender": db_userprofile.gender,
-            "Is_active": db_userprofile.is_active,
-        },
-    }
+        await redis_client.set(cache_key, json.dumps(payload), ex=3600)
+        logger.info(f"Profile loaded from DB and cached | user_id={user_id}")
+
+        return payload
+
+    except Exception as e:
+        logger.error(f"Error get profile | user_id={user_id} | error={e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
 
 @router_user.put("/me/update")
 async def UpdateProfile(
-    IdUser: Annotated[str, Query(...)],
     user_data: InformationUser,
+    IdUser:dict | str=Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
+    await redis_client.delete(f"user:profile:{IdUser.get("ID")}")
     result = await session.execute(
-        select(UserProfile).where(UserProfile.UserID == IdUser)
+        select(UserProfile).where(UserProfile.UserID == IdUser.get("ID"))
     )
     profile = result.scalar_one_or_none()
+
+    logger.info(f"Profile cache deleted | user_id={IdUser.get("ID")}")
 
     if not profile:
         AddProfileUser = UserProfile(
@@ -101,6 +137,7 @@ async def UpdateProfile(
         session.add(AddProfileUser)
         await session.commit()
         await session.refresh(AddProfileUser)
+        logger.info("تم إنشاء الملف الشخصي بنجاح")
         return {"message": "Profile created successfully", "profile": AddProfileUser}
 
     profile.Phone = user_data.phone.strip()
@@ -110,7 +147,7 @@ async def UpdateProfile(
 
     await session.commit()
     await session.refresh(profile)
-
+    logger.info("تم تحديث الملف الشخصي بنجاح")
     return {"message": "Profile updated successfully", "profile": profile}
 
 
@@ -121,6 +158,7 @@ async def ChangePasswords(
     session: AsyncSession = Depends(get_async_session),
 ):
     if passwords.NewPassword != passwords.ConfirmPassword:
+        logger.warning("كلمات المرور غير متطابقة")
         raise HTTPException(status_code=400, detail="كلمات المرور غير متطابقة")
 
     result = await session.execute(
@@ -140,7 +178,7 @@ async def ChangePasswords(
         )
 
     user.password = generate_password_hash(passwords.NewPassword)
-
+    logger.info("تم تغيير كلمة المرور بنجاح")
     await session.commit()
 
     return {"message": "تم تغيير كلمة المرور بنجاح"}
@@ -151,6 +189,15 @@ async def get_my_subscriptions(
     session: AsyncSession = Depends(get_async_session),
     current_user_id: dict = Depends(get_current_user),
 ):
+    cashed_key = f"user:subscriptions:{current_user_id.get('ID')}"
+    cashed = await redis_client.get(cashed_key)
+    if cashed:
+        logger.info("تم تحميل جميع الاشتراكات بنجاح من Redis")
+        return {
+            "status": "success",
+            "subscriptions": json.loads(cashed),
+        }
+
     query = select(Subscriptions).where(
         Subscriptions.UserID == current_user_id.get("ID")
     )
@@ -162,10 +209,22 @@ async def get_my_subscriptions(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="عفواً، لا توجد اشتراكات مسجلة لهذا الحساب حالياً.",
         )
-
+    all_db_subscriptions = [
+        {
+            "StartDate": str(sub.StartDate),
+            "EndDate": str(sub.EndDate),
+            "status": sub.status,
+        }
+        for sub in db_subscriptions
+    ]
+    await redis_client.set(
+        cashed_key,
+        json.dumps(all_db_subscriptions),
+        ex=3600,
+    )
+    logger.info("تم تحميل جميع الاشتراكات بنجاح")
     return {
         "status": "success",
-        "count": len(db_subscriptions),
         "subscriptions": db_subscriptions,
     }
 
@@ -175,46 +234,60 @@ async def get_my_bookings(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
+    
     user_id = current_user.get("ID") or current_user.get("UserID")
-
-    query = (
-        select(Booking, Classes)
-        .join(Classes, Classes.ClassesID == Booking.ClassID)
-        .where(Booking.UserID == user_id)
-    )
-    result = await session.execute(query)
-    rows = result.all()
-
-    if not rows:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="عفواً، ليس لديك أي حجوزات مسجلة حتى الآن.",
-        )
-
-    bookings_data = []
-    for booking, class_obj in rows:
-        bookings_data.append(
-            {
-                "BookingID": (
-                    booking.BookingID if hasattr(booking, "BookingID") else None
-                ),
-                "ClassID": booking.ClassID,
-                "status": getattr(booking, "status", "active"),
-                "ClassName": class_obj.ClassName,
-                "TypeClass": class_obj.TypeClass,
-                "Price": class_obj.Price,
-                "Date": class_obj.Date,
-                "Start_time": class_obj.Start_time,
-                "End_time": class_obj.End_time,
-                "Trainer_id": class_obj.Trainer_id,
+    cache_key = f"user:bookings:{user_id}"
+    try:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            logger.info(f"Bookings cache hit | user_id={user_id}")
+            bookings_data = json.loads(cached)
+            return {
+                "status": "success",
+                "count": len(bookings_data),
+                "bookings": bookings_data,
             }
-        )
 
-    return {
-        "status": "success",
-        "count": len(bookings_data),
-        "bookings": bookings_data,
-    }
+        query = (
+            select(Booking, Classes)
+            .join(Classes, Classes.ClassesID == Booking.ClassID)
+            .where(Booking.UserID == user_id)
+        )
+        result = await session.execute(query)
+        rows = result.all()
+
+        bookings_data = []
+        for booking, class_obj in rows:
+            bookings_data.append(
+                {
+                    "BookingID": getattr(booking, "BookingID", None),
+                    "ClassID": booking.ClassID,
+                    "status": getattr(booking, "status", "active"),
+                    "ClassName": class_obj.ClassName,
+                    "TypeClass": class_obj.TypeClass,
+                    "Price": class_obj.Price,
+                    "Date": str(class_obj.Date) if class_obj.Date else None,
+                    "Start_time": class_obj.Start_time,
+                    "End_time": class_obj.End_time,
+                    "Trainer_id": class_obj.Trainer_id,
+                }
+            )
+
+        await redis_client.set(cache_key, json.dumps(bookings_data), ex=3600)
+        logger.info(f"Bookings loaded from DB | user_id={user_id} | count={len(bookings_data)}")
+
+        return {
+            "status": "success",
+            "count": len(bookings_data),
+            "bookings": bookings_data,
+        }
+
+    except Exception as e:
+        logger.error(f"Error get bookings | user_id={user_id} | error={e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @router_user.post("/refresh")
@@ -234,14 +307,19 @@ async def refresh_session(refresh_token: str = Body(..., embed=True)):
             new_access_payload, SECRET_KEY, algorithm=ALGORITHM
         )
 
+        logger.info("تم تحديث الجلسة بنجاح")
         return {"access_token": new_access_token, "token_type": "bearer"}
 
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل"
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="التوكن ده مضروب🚨")
+    except Exception as e:
+        logger.error(f"Error : {e}")
+        raise HTTPException(status_code=401, detail="توكن غير صالح")
+
+    # except jwt.ExpiredSignatureError:
+    # raise HTTPException(
+    # status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل"
+    # )
+    # except jwt.InvalidTokenError:
+    # raise HTTPException(status_code=401, detail="التوكن ده مضروب🚨")
 
 
 @router_user.post("/upload-profile-image")
@@ -250,15 +328,19 @@ async def upload_profile_image(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
+
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="الملف المرفوع ليس صورة صالحة.")
 
     user_id = current_user.get("ID") or current_user.get("UserID")
     if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
 
     ext = (file.filename or "img.jpg").rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
+        logger.warning(f"امتداد الصورة غير مدعوم. {current_user.get('ID')}")
         raise HTTPException(status_code=400, detail="امتداد الصورة غير مدعوم.")
 
     unique_filename = f"{uuid.uuid4().hex}.{ext}"
@@ -266,11 +348,16 @@ async def upload_profile_image(
 
     try:
         content = await file.read()
-        if len(content) > 5 * 1024 * 1024:  
-            raise HTTPException(status_code=400, detail="حجم الصورة كبير جدًا (الحد 5MB).")
+        if len(content) > 5 * 1024 * 1024:
+            logger.warning("حجم الصورة كبير Jacket")
+            await session.rollback()
+            raise HTTPException(
+                status_code=400, detail="حجم الصورة كبير جدًا (الحد 5MB)."
+            )
 
         with open(file_path, "wb") as buffer:
             buffer.write(content)
+            logger.info("تم حفظ الصورة بنجاح")
 
         await session.execute(
             update(Users)
@@ -278,9 +365,11 @@ async def upload_profile_image(
             .values(profile_image=unique_filename)
         )
         await session.commit()
+        logger.info("تم تحميل الصورة بنجاح")
 
         image_url = f"/static/profiles/{unique_filename}"
 
+        logger.info("تم رفع الصورة بنجاح")
         return {
             "status": "success",
             "message": "تم رفع الصورة بنجاح",

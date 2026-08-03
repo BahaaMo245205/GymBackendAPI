@@ -22,6 +22,7 @@ from fastapi.requests import Request
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 from sqlalchemy import select
+from ...app import logger
 import httpx
 import os
 
@@ -79,12 +80,15 @@ async def login(
             "Role": db_user.Role,
         }
     )
+    logger.info("تم تكوين الجلسة بنجاح")
+    
     if not access_token:
         return HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error access token",
         )
 
+    logger.info("تم تسجيل الدخول بنجاح")
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -120,10 +124,12 @@ async def register(
         await session.commit()
         await session.refresh(add_user)
 
+        logger.info("تم تسجيل الحساب بنجاح يا برنس!")
         return {"status": "success", "message": "تم تسجيل الحساب بنجاح يا برنس!"}
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error : {e}")
         raise HTTPException(status_code=500, detail=f"Error : {e}")
 
 
@@ -154,6 +160,7 @@ async def forgot_password(
     fm = FastMail(config=conf)
     await fm.send_message(message)
 
+    logger.info("إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.")
     return {
         "status": "success",
         "message": "إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.",
@@ -169,6 +176,7 @@ async def reset_password(
 
     email = verify_reset_token(token)
     if not email:
+        logger.error("🚨 الرابط غير صالح أو انتهت صلاحيته!")
         raise HTTPException(
             status_code=400, detail="🚨 الرابط غير صالح أو انتهت صلاحيته!"
         )
@@ -178,11 +186,13 @@ async def reset_password(
     user = result.scalar_one_or_none()
 
     if not user:
+        logger.error("المستخدم غير موجود")
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
     user.password = generate_password_hash(data.new_password)
     await session.commit()
 
+    logger.info("تم تغيير كلمة المرور بنجاح يا برنس!")
     return {"status": "success", "message": "تم تغيير كلمة المرور بنجاح يا برنس!"}
 
 
@@ -223,6 +233,7 @@ async def google_callback(
     async with httpx.AsyncClient() as client:
         token_response = await client.post(token_url, data=token_data)
         if token_response.status_code != 200:
+            logger.error("🚨 فشل التحقق من الكود مع سيرفرات جوجل")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="🚨 فشل التحقق من الكود مع سيرفرات جوجل",
@@ -236,6 +247,7 @@ async def google_callback(
 
         user_info_response = await client.get(user_info_url, headers=headers)
         if user_info_response.status_code != 200:
+            logger.error("🚨 فشل سحب بيانات المستخدم من جوجل")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="🚨 فشل سحب بيانات المستخدم من جوجل",
@@ -265,8 +277,9 @@ async def google_callback(
             session.add(db_user)
             await session.commit()
             await session.refresh(db_user)
-        except Exception:
+        except Exception as e :
             await session.rollback()
+            logger.error("خطأ أثناء تسجيل حساب جوجل في الداتابيز ; {}".format(e))
             raise HTTPException(
                 status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
             )
@@ -280,7 +293,10 @@ async def google_callback(
                 "Role": db_user.Role,
             }
         )
+        logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح!")
 
+
+    logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح!")
     return {
         "status": "success",
         "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
