@@ -9,7 +9,6 @@ from ...Database.db import (
     get_async_session,
     Memberships,
     Subscriptions,
-    UserProfile,
     Users as Us,
     Classes,
 )
@@ -495,52 +494,6 @@ async def create_new_class(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"حدث خطأ أثناء حفظ الحصة: {str(e)}",
         )
-
-
-# @router_admin.put("/classes/{class_id}", status_code=status.HTTP_200_OK)
-# async def update_class(
-#     class_id: str,
-#     class_data: ClassUpdateSchema,
-#     session: AsyncSession = Depends(get_async_session),
-#     admin_role: str = Depends(ensure_admin_role),
-# ):
-#     await redis_client.delete("")
-#     query = select(Classes).where(Classes.ClassesID == class_id)
-#     result = await session.execute(query)
-#     db_class = result.scalar_one_or_none()
-
-#     if not db_class:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="الحصة دي مش موجودة في السيستم، اتأكد من الـ ID",
-#         )
-
-#     update_data = class_data.model_dump(exclude_unset=True)  #
-
-#     if not update_data:
-#         raise HTTPException(
-#             status_code=status.HTTP_400_BAD_REQUEST,
-#             detail="لم يتم إرسال أي بيانات للتحديث!",
-#         )
-
-#     for key, value in update_data.items():  #
-#         setattr(db_class, key, value)  #
-
-#     try:
-#         await session.commit()
-#         await session.refresh(db_class)
-
-#         return {
-#             "status": "success",
-#             "message": "تم تحديث بيانات الحصة بنجاح",
-#             "data": db_class,
-#         }
-#     except Exception as e:
-#         await session.rollback()
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail="حدث خطأ أثناء تحديث الحصة في قاعدة البيانات",
-#         )
 
 
 @router_admin.put("/classes/{class_id}", status_code=status.HTTP_200_OK)

@@ -17,7 +17,6 @@ from fastapi import (
     APIRouter,
     Depends,
     status,
-    Query,
     Body,
     File,
 )
@@ -115,7 +114,7 @@ async def ProfileUser(
 @router_user.put("/me/update")
 async def UpdateProfile(
     user_data: InformationUser,
-    IdUser:dict | str=Depends(get_current_user),
+    IdUser:dict=Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     await redis_client.delete(f"user:profile:{IdUser.get("ID")}")
@@ -132,7 +131,7 @@ async def UpdateProfile(
             gender=user_data.Gender.strip().title(),
             address=user_data.Address,
             age=int(user_data.Age),
-            userid=IdUser,
+            userid=IdUser.get("ID"),
         )
         session.add(AddProfileUser)
         await session.commit()
@@ -291,36 +290,70 @@ async def get_my_bookings(
 
 
 @router_user.post("/refresh")
-async def refresh_session(refresh_token: str = Body(..., embed=True)):
+async def refresh_session(
+    refresh_token: str = Body(..., embed=True),
+    session: AsyncSession = Depends(get_async_session),
+):
     try:
-        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_email = payload.get("sub")
-
-        if not user_email:
-            raise HTTPException(status_code=401, detail="توكن غير صالح")
-
-        new_access_payload = {
-            "sub": user_email,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
-        }
-        new_access_token = jwt.encode(
-            new_access_payload, SECRET_KEY, algorithm=ALGORITHM
+        payload = jwt.decode(
+            refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
         )
 
-        logger.info("تم تحديث الجلسة بنجاح")
-        return {"access_token": new_access_token, "token_type": "bearer"}
+        user_id = payload.get("ID")
+        ip_address = payload.get("ip-address")
 
+        if not user_id:
+            raise HTTPException(status_code=401, detail="توكن غير صالح")
+
+        result = await session.execute(
+            select(Users).where(Users.UserID == user_id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(status_code=401, detail="المستخدم غير موجود")
+
+
+        new_access_payload = {
+            "ID": user.UserID,
+            "Email": getattr(user, "Email", None) or getattr(user, "email", None),
+            "UserName": getattr(user, "UserName", None) or getattr(user, "username", None),
+            "Role": getattr(user, "Role", None) or getattr(user, "role", "User"),
+            "ip-address": ip_address,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
+        }
+
+        if not new_access_payload["Email"]:
+            raise HTTPException(status_code=401, detail="بيانات المستخدم غير مكتملة")
+
+        new_access_token = jwt.encode(
+            new_access_payload,
+            SECRET_KEY,
+            algorithm=ALGORITHM,
+        )
+
+        logger.info(f"Session refreshed | user_id={user.UserID}")
+        return {
+            "access_token": new_access_token,
+            "token_type": "bearer",
+        }
+
+    except jwt.ExpiredSignatureError:
+        logger.warning("Refresh token expired")
+        raise HTTPException(
+            status_code=401,
+            detail="انتهت الجلسة بالكامل، سجل دخول مرة أخرى",
+        )
+    except jwt.InvalidTokenError:
+        logger.warning("Invalid refresh token")
+        raise HTTPException(status_code=401, detail="التوكن غير صالح")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error : {e}")
+        logger.error(f"Refresh error: {e}")
         raise HTTPException(status_code=401, detail="توكن غير صالح")
-
-    # except jwt.ExpiredSignatureError:
-    # raise HTTPException(
-    # status_code=401, detail="انتهت الجلسة بالكامل، سجل دخول تاني يا بطل"
-    # )
-    # except jwt.InvalidTokenError:
-    # raise HTTPException(status_code=401, detail="التوكن ده مضروب🚨")
-
 
 @router_user.post("/upload-profile-image")
 async def upload_profile_image(

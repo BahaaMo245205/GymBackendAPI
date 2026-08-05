@@ -1,5 +1,7 @@
+from .limiter import custom_rate_limit_handler, limiter
 from fastapi.middleware.cors import CORSMiddleware
 from App.Database.db import create_db_and_table
+from slowapi.errors import RateLimitExceeded
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from App.redis_client import redis_client
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up and connecting to services...")
 
     await create_db_and_table()
+
     try:
         await redis_client.ping()
         logger.info("Successfully connected to Redis! 🟢")
@@ -100,6 +103,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
+
 BASE_DIR = Path(__file__).resolve().parent
 static_profiles = BASE_DIR / "static"
 
@@ -125,3 +131,9 @@ app.include_router(auth.auth_router)
 from App.routes.membership import route
 
 app.include_router(route.router_membership)
+
+from App.routes.payment import router
+
+app.include_router(router.router_payment)
+
+

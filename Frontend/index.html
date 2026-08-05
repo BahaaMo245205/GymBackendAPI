@@ -243,40 +243,91 @@
     <script>
         const BACKEND_URL = "http://localhost:8000";
 
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    return null;
+                }
+
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch (err) {
+                console.error("Refresh failed:", err);
+                return null;
+            }
+        }
+
         async function checkAuth() {
-            const token = localStorage.getItem("access_token");
+            let token = localStorage.getItem("access_token");
             if (!token) {
                 window.location.href = "login.html";
-                return;
+                return null;
             }
 
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                let res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
                     headers: {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     }
                 });
+
+                // access انتهى → حاول refresh
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) {
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return null;
+                    }
+
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+
                 const data = await res.json();
 
                 if (res.ok && data.Info) {
-                    document.getElementById("nav-username").textContent = `👤 ${data.Info.UserName}`;
+                    const role = (data.Info.Role || data.Info["user-role"] || "")
+                        .toString()
+                        .toLowerCase();
+
+                    if (role !== "admin") {
+                        alert("هذه الصفحة مخصصة للأدمن فقط");
+                        window.location.href = "index.html";
+                        return null;
+                    }
+
+                    document.getElementById("nav-username").textContent =
+                        `👤 ${data.Info.UserName}`;
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
-
-                    // إظهار زر الأدمن لو الدور Admin
-                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
-                    if (role === "admin") {
-                        document.getElementById("adminLink").style.display = "inline-block";
-                    }
-                } else {
-                    localStorage.clear();
-                    window.location.href = "login.html";
+                    return token;
                 }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
             } catch (err) {
                 console.error(err);
                 window.location.href = "login.html";
+                return null;
             }
         }
 
@@ -287,6 +338,8 @@
         });
 
         checkAuth();
+        console.log("access", localStorage.getItem("access_token")?.slice(0, 30));
+        console.log("refresh", localStorage.getItem("refresh_token")?.slice(0, 30));
     </script>
 </body>
 

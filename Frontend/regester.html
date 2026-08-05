@@ -97,6 +97,22 @@
         button:active {
             transform: scale(0.98);
         }
+
+        .register-link {
+            display: block;
+            text-align: center;
+            margin-top: 24px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .register-link:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -126,8 +142,8 @@
         </div>
 
         <button id="click">تسجيل</button>
+        <a href="login.html" class="register-link">لديك حساب بالفعل؟ سجل الدخول</a>
     </div>
-
     <script>
         const BACKEND_URL = 'http://localhost:8000';
 
@@ -140,6 +156,10 @@
         btnClick.addEventListener("click", async () => {
             if (password.value !== ConfirmPassword.value) {
                 alert("كلمات المرور غير متطابقة!");
+                return;
+            }
+            if (password.length < 8) {
+                alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
                 return;
             }
 
@@ -165,7 +185,19 @@
                     console.log("Success:", result);
                     window.location.href = "login.html";
                 } else {
-                    alert("فشل التسجيل: " + (result.detail || "حدث خطأ ما"));
+                    let message = "البيانات غير صحيحة";
+
+                    if (typeof result.detail === "string") {
+                        message = result.detail;
+                    } else if (Array.isArray(result.detail)) {
+                        message = result.detail
+                            .map(err => err.msg || JSON.stringify(err))
+                            .join("\n");
+                    } else if (result.detail && typeof result.detail === "object") {
+                        message = result.detail.msg || JSON.stringify(result.detail);
+                    }
+
+                    alert("فشل تسجيل الدخول:\n" + message);
                 }
 
             } catch (error) {

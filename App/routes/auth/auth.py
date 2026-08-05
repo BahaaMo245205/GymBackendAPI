@@ -19,6 +19,7 @@ from App.Database.db import get_async_session, Users
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import RedirectResponse
 from fastapi.requests import Request
+from ...limiter import limiter
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 from sqlalchemy import select
@@ -35,41 +36,47 @@ auth_router = APIRouter(prefix="/v1/api/auth", tags=["Auth"])
 conf = ConnectionConfig(
     MAIL_USERNAME=os.getenv("MAIL_USERNAME"),
     MAIL_PASSWORD=os.getenv("MAIL_PASSWORD"),
-    MAIL_PORT=587,
+    MAIL_PORT=465,
     MAIL_FROM=os.getenv("MAIL_FROM"),
     MAIL_SERVER=os.getenv("MAIL_SERVER"),
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
+    MAIL_STARTTLS=False,
+    MAIL_SSL_TLS=True,
     USE_CREDENTIALS=True,
 )
 
 
 @auth_router.post("/login", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 async def login(
     login_user: LoginSchema,
     request: Request,
     session: AsyncSession = Depends(get_async_session),
 ):
-    """تسجيل الدخول والتحقق من الهوية بأمان تام"""
+    """تسجيل الدخول والتحقق من الهوية"""
 
-    query = select(Users).where(Users.email == login_user.email)
-    result = await session.execute(query)
+    result = await session.execute(select(Users).where(Users.email == login_user.email))
     db_user = result.scalar_one_or_none()
 
     invalid_credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="🚨 البريد الإلكتروني أو كلمة المرور غير صحيحة!",
+        detail="البريد الإلكتروني أو كلمة المرور غير صحيحة!",
     )
 
     if not db_user:
         raise invalid_credentials_exception
 
     is_password_correct = validate_password(
-        hashedPassword=db_user.password, password=login_user.password
+        hashedPassword=db_user.password,
+        password=login_user.password,
     )
-
     if not is_password_correct:
         raise invalid_credentials_exception
+
+    if hasattr(db_user, "is_active") and not db_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="هذا الحساب محظور. تواصل مع الإدارة.",
+        )
 
     access_token, refresh_token = create_access_token(
         data={
@@ -80,15 +87,15 @@ async def login(
             "Role": db_user.Role,
         }
     )
-    logger.info("تم تكوين الجلسة بنجاح")
-    
+
     if not access_token:
-        return HTTPException(
+        raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error access token",
+            detail="فشل إنشاء التوكن",
         )
 
-    logger.info("تم تسجيل الدخول بنجاح")
+    logger.info(f"Login success | user_id={db_user.UserID} | email={db_user.email}")
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -98,8 +105,11 @@ async def login(
 
 
 @auth_router.post("/register", status_code=201)
+@limiter.limit("10/minute")
 async def register(
-    register: RegisterSchema, session: AsyncSession = Depends(get_async_session)
+    request: Request,
+    register: RegisterSchema,
+    session: AsyncSession = Depends(get_async_session),
 ):
     """تسجيل مستخدم جديد"""
 
@@ -134,43 +144,36 @@ async def register(
 
 
 @auth_router.post("/forgot-password")
-async def forgot_password(
-    data: ForgotPasswordSchema, session: AsyncSession = Depends(get_async_session)
-):
-    query = select(Users).where(Users.email == data.email)
-    result = await session.execute(query)
-    user = result.scalar_one_or_none()
+async def forgot_password(email: ForgotPasswordSchema):
+    try :
+            
+        token = create_reset_token(email.email)
+        reset_link = f"http://localhost:5500/Frontend/reset-password.html?token={token}"
 
-    if not user:
+        message = MessageSchema(
+            subject="Gym System - Reset Your Password",
+            recipients=[email.email],
+            body=f"<a href='{reset_link}'>تغير باسورد </a>",
+            subtype=MessageType.html,
+        )
+
+        fm = FastMail(config=conf)
+        await fm.send_message(message)
+
+        logger.info("إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.")
         return {
             "status": "success",
             "message": "إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.",
         }
-
-    token = create_reset_token(user.email)
-    reset_link = f"http://localhost:5500/reset-password?token={token}"
-
-    message = MessageSchema(
-        subject="Gym System - Reset Your Password",
-        recipients=[user.email],
-        body=f"<a href='{reset_link}'>تغير باسورد </a>",
-        subtype=MessageType.html,
-    )
-
-    fm = FastMail(config=conf)
-    await fm.send_message(message)
-
-    logger.info("إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.")
-    return {
-        "status": "success",
-        "message": "إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.",
-    }
-
+    except Exception as e:
+        logger.error(f"Error : {e}")
+        raise HTTPException(status_code=500, detail=f"Error : {e}")
+    
 
 @auth_router.post("/reset-password")
 async def reset_password(
-    data: ResetPasswordSchema,
-    token: str = Query(),
+    token: str = Query(..., alias="token"),
+    data: ResetPasswordSchema=None,
     session: AsyncSession = Depends(get_async_session),
 ):
 
@@ -219,10 +222,10 @@ async def google_callback(
     session: AsyncSession = Depends(get_async_session),
 ):
     if not code:
-        raise HTTPException(status_code=400, detail="🚨 الـ Authorization Code مفقود!")
+        raise HTTPException(status_code=400, detail="Authorization Code مفقود")
 
-    token_url: str = "https://oauth2.googleapis.com/token"
-    token_data: dict = {
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
         "code": code,
         "client_id": GOOGLE_CLIENT_ID,
         "client_secret": GOOGLE_CLIENT_SECRET,
@@ -233,78 +236,74 @@ async def google_callback(
     async with httpx.AsyncClient() as client:
         token_response = await client.post(token_url, data=token_data)
         if token_response.status_code != 200:
-            logger.error("🚨 فشل التحقق من الكود مع سيرفرات جوجل")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="🚨 فشل التحقق من الكود مع سيرفرات جوجل",
-            )
+            logger.error("فشل التحقق من الكود مع جوجل: %s", token_response.text)
+            raise HTTPException(status_code=400, detail="فشل التحقق من الكود مع جوجل")
 
-        tokens: dict = token_response.json()
-        access_token: str = tokens.get("access_token")
+        google_tokens = token_response.json()
+        google_access_token = google_tokens.get("access_token")
 
-        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
-        headers = {"Authorization": f"Bearer {access_token}"}
-
-        user_info_response = await client.get(user_info_url, headers=headers)
+        user_info_response = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {google_access_token}"},
+        )
         if user_info_response.status_code != 200:
-            logger.error("🚨 فشل سحب بيانات المستخدم من جوجل")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="🚨 فشل سحب بيانات المستخدم من جوجل",
+                status_code=400, detail="فشل سحب بيانات المستخدم من جوجل"
             )
 
-        google_user: dict = user_info_response.json()
-        print(google_user)
+        google_user = user_info_response.json()
 
-    email: str = google_user.get("email")
-    username: str = google_user.get("name")
+    email = (google_user.get("email") or "").strip()
+    username = (google_user.get("name") or email.split("@")[0]).strip()
 
-    query = select(Users).where(Users.email == email)
-    result = await session.execute(query)
+    if not email:
+        raise HTTPException(status_code=400, detail="الإيميل غير متوفر من جوجل")
+
+    result = await session.execute(select(Users).where(Users.email == email))
     db_user = result.scalar_one_or_none()
 
     if not db_user:
-        random_password: str = generate_password_hash(os.urandom(16).hex())
-
+        random_password = generate_password_hash(os.urandom(16).hex())
         db_user = Users(
-            username=username.title().strip(),
-            email=email.strip(),
-            password=random_password.strip(),
+            username=username.title(),
+            email=email,
+            password=random_password,
             role="User",
+            profile_image=google_user.get("picture"),
         )
-
         try:
             session.add(db_user)
             await session.commit()
             await session.refresh(db_user)
-        except Exception as e :
+            logger.info("تم إنشاء حساب جوجل جديد: %s", email)
+        except Exception as e:
             await session.rollback()
-            logger.error("خطأ أثناء تسجيل حساب جوجل في الداتابيز ; {}".format(e))
-            raise HTTPException(
-                status_code=500, detail="خطأ أثناء تسجيل حساب جوجل في الداتابيز"
-            )
+            logger.error("خطأ أثناء تسجيل حساب جوجل: %s", e)
+            raise HTTPException(status_code=500, detail="خطأ أثناء تسجيل حساب جوجل")
 
-        access_token, refresh_token = create_access_token(
-            {
-                "id": db_user.UserID,
-                "username": db_user.UserName,
-                "email": db_user.email,
-                "ip-address": retrieve_client_ip(request),
-                "Role": db_user.Role,
-            }
-        )
-        logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح!")
+    app_access_token, app_refresh_token = create_access_token(
+        {
+            "ID": db_user.UserID,
+            "UserName": getattr(db_user, "UserName", None)
+            or getattr(db_user, "username", username),
+            "Email": email,
+            "ip-address": retrieve_client_ip(request),
+            "Role": getattr(db_user, "Role", None) or getattr(db_user, "role", "User"),
+        }
+    )
+
+    logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح: %s", email)
+
+    redirect_url = (
+        f"http://localhost:5500/Frontend/login.html"
+        f"?access_token={app_access_token}&refresh_token={app_refresh_token}"
+    )
+    return RedirectResponse(url=redirect_url)
 
 
-    logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح!")
+@auth_router.get("/check", status_code=status.HTTP_200_OK)
+async def read_users_me(current_user: dict = Depends(get_current_user)):
     return {
-        "status": "success",
-        "message": "تم تسجيل الدخول بواسطة جوجل بنجاح!",
-        "token": access_token,
-        "refresh-token": refresh_token,
+        "Info": current_user,
+        "message": "Welcome to your profile!",
     }
-
-
-@auth_router.get("/check")
-async def read_users_me(current_user: str = Depends(get_current_user)):
-    return {"Info": current_user, "message": "Welcome to your profile!"}

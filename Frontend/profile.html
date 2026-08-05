@@ -559,17 +559,31 @@
             e.preventDefault();
             const token = localStorage.getItem("access_token");
 
-            // if (!userid) {
-            //     alert("لم يتم العثور على معرف المستخدم");
-            //     return;
-            // }
-
             const body = {
                 Age: Number(document.getElementById("inputAge").value) || 0,
                 Gender: document.getElementById("inputGender").value,
                 phone: document.getElementById("inputPhone").value,
                 Address: document.getElementById("inputAddress").value
             };
+
+            if (body.Age < 10 || body.Age > 100) {
+                alert("العمر يجب أن يكون بين 10 و 100");
+                return;
+            }
+
+            if ( body.Address.length <= 16) {
+                alert("العنوان يجب أن يكون 100 أحرف أو أقل");
+                return;
+            }
+            if (body.phone.length < 10 || body.phone.length > 11) {
+                alert("الهاتف يجب أن يكون بين 10 و 11 أرقام");
+                return;
+            }
+
+            if (body.Gender !== "Male" && body.Gender !== "Female") {
+                alert("النوع يجب أن يكون \"ذكر\" أو \"أنثى\"");
+                return;
+            }
 
             try {
                 const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update`, {
@@ -587,7 +601,19 @@
                     alert("تم تحديث البيانات بنجاح ✓");
                     loadProfile(token);
                 } else {
-                    alert("فشل التحديث: " + (result.detail || "حدث خطأ"));
+                    let message = "البيانات غير صحيحة";
+
+                    if (typeof result.detail === "string") {
+                        message = result.detail;
+                    } else if (Array.isArray(result.detail)) {
+                        message = result.detail
+                            .map(err => err.msg || JSON.stringify(err))
+                            .join("\n");
+                    } else if (result.detail && typeof result.detail === "object") {
+                        message = result.detail.msg || JSON.stringify(result.detail);
+                    }
+
+                    alert("فشل تسجيل الدخول:\n" + message);
                 }
             } catch (err) {
                 console.error(err);
@@ -608,8 +634,8 @@
                 alert("كلمة المرور الجديدة غير متطابقة");
                 return;
             }
-            if (newPass.length < 6) {
-                alert("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+            if (newPass.length < 8) {
+                alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
                 return;
             }
 
@@ -650,7 +676,7 @@
 
             const token = localStorage.getItem("access_token");
             const formData = new FormData();
-            formData.append("file", file); 
+            formData.append("file", file);
 
             try {
                 const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-profile-image`, {

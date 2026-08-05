@@ -6,132 +6,451 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - الأدمن</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f4f7fb; min-height: 100vh; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
 
         .navbar {
-            background: #fff; padding: 14px 28px; display: flex; justify-content: space-between;
-            align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1000;
+            background: #fff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .navbar .logo { font-size: 20px; font-weight: 700; color: #3b82f6; text-decoration: none; }
-        .nav-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .navbar .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .nav-link {
-            color: #64748b; text-decoration: none; font-size: 14px; font-weight: 600;
-            padding: 8px 14px; border-radius: 8px; transition: all 0.2s;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s;
         }
-        .nav-link:hover, .nav-link.active { color: #3b82f6; background: #eff6ff; }
-        .nav-link.admin-active { background: #fef3c7; color: #d97706; }
-        .user-section { display: flex; align-items: center; gap: 14px; }
-        .username { color: #1e293b; font-size: 14px; font-weight: 600; }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .nav-link.admin-active {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .username {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
         .logout-btn {
-            padding: 8px 14px; background: #ef4444; color: white; border: none;
-            border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+            padding: 8px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
         }
-        .logout-btn:hover { background: #dc2626; }
 
-        .main-content { max-width: 1100px; margin: 36px auto; padding: 0 20px 50px; }
-        .page-title { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 6px; }
-        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 28px; }
+        .logout-btn:hover {
+            background: #dc2626;
+        }
 
-        .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+        .main-content {
+            max-width: 1100px;
+            margin: 36px auto;
+            padding: 0 20px 50px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 28px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
         .tab-btn {
-            padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px;
-            font-weight: 600; cursor: pointer; background: #e2e8f0; color: #475569;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #e2e8f0;
+            color: #475569;
         }
-        .tab-btn:hover { background: #cbd5e1; }
-        .tab-btn.active { background: #3b82f6; color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+
+        .tab-btn:hover {
+            background: #cbd5e1;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
 
         .card {
-            background: #fff; border-radius: 16px; padding: 28px;
-            box-shadow: 0 6px 24px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 24px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
         }
-        .section-title { font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 20px; }
 
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
-        .form-group { margin-bottom: 4px; }
-        .form-group.full { grid-column: 1 / -1; }
-        label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 6px; }
-        input, select, textarea {
-            width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
-            font-size: 14px; background: #f8fafc; color: #1e293b; outline: none;
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 20px;
         }
-        input:focus, select:focus, textarea:focus {
-            border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
         }
-        textarea { resize: vertical; min-height: 80px; }
+
+        @media (max-width: 700px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 4px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            background: #f8fafc;
+            color: #1e293b;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #3b82f6;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
 
         .btn {
-            padding: 10px 18px; border: none; border-radius: 10px; font-size: 13px;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #2563eb; }
-        .btn-success { background: #16a34a; color: white; }
-        .btn-success:hover:not(:disabled) { background: #15803d; }
-        .btn-warning { background: #f59e0b; color: white; }
-        .btn-warning:hover:not(:disabled) { background: #d97706; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn-danger:hover:not(:disabled) { background: #dc2626; }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
-        .btn-ghost { background: #e2e8f0; color: #475569; }
-        .btn-ghost:hover { background: #cbd5e1; }
 
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .list-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 0; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap;
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
-        .list-item:last-child { border-bottom: none; }
-        .list-item h4 { font-size: 15px; color: #1e293b; margin-bottom: 3px; }
-        .list-item p { font-size: 13px; color: #64748b; }
-        .list-actions { display: flex; gap: 8px; }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #16a34a;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #15803d;
+        }
+
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #d97706;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-ghost {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-ghost:hover {
+            background: #cbd5e1;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item h4 {
+            font-size: 15px;
+            color: #1e293b;
+            margin-bottom: 3px;
+        }
+
+        .list-item p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .list-actions {
+            display: flex;
+            gap: 8px;
+        }
 
         .user-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 16px 0; border-bottom: 1px solid #f1f5f9; gap: 14px; flex-wrap: wrap;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 14px;
+            flex-wrap: wrap;
         }
-        .user-row:last-child { border-bottom: none; }
-        .user-row h4 { font-size: 15px; color: #1e293b; margin-bottom: 4px; }
-        .user-row p { font-size: 13px; color: #64748b; }
-        .user-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+        .user-row:last-child {
+            border-bottom: none;
+        }
+
+        .user-row h4 {
+            font-size: 15px;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .user-row p {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
         .user-actions select {
-            padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
-            font-size: 13px; background: #f8fafc; width: auto; min-width: 120px;
+            padding: 8px 12px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            background: #f8fafc;
+            width: auto;
+            min-width: 120px;
         }
 
-        .role-badge, .status-badge {
-            display: inline-block; padding: 3px 10px; border-radius: 20px;
-            font-size: 12px; font-weight: 700; margin-right: 4px;
+        .role-badge,
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-right: 4px;
         }
-        .role-user { background: #eff6ff; color: #3b82f6; }
-        .role-trainer { background: #f0fdf4; color: #16a34a; }
-        .role-admin { background: #fef3c7; color: #d97706; }
-        .status-active { background: #dcfce7; color: #16a34a; }
-        .status-blocked { background: #fee2e2; color: #dc2626; }
 
-        .empty-msg { text-align: center; color: #94a3b8; padding: 24px; font-size: 14px; }
+        .role-user {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .role-trainer {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .role-admin {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-active {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .status-blocked {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: #94a3b8;
+            padding: 24px;
+            font-size: 14px;
+        }
+
         .edit-hint {
-            background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
-            padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; display: none;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
         }
-        .edit-hint.show { display: block; }
+
+        .edit-hint.show {
+            display: block;
+        }
 
         .stats-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 18px; margin-bottom: 28px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
         }
-        .stat-card {
-            background: #fff; border-radius: 14px; padding: 22px;
-            border: 1px solid #e2e8f0; text-align: center;
-        }
-        .stat-card .number { font-size: 28px; font-weight: 800; color: #3b82f6; margin-bottom: 4px; }
-        .stat-card .label { font-size: 13px; color: #64748b; font-weight: 600; }
 
-        #loader { text-align: center; color: #64748b; margin-top: 120px; font-size: 16px; }
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        #loader {
+            text-align: center;
+            color: #64748b;
+            margin-top: 120px;
+            font-size: 16px;
+        }
     </style>
 </head>
 
@@ -194,13 +513,16 @@
                     </div>
                     <div class="actions">
                         <button type="submit" class="btn btn-primary" id="btnAddMembership">إضافة الباقة</button>
-                        <button type="button" class="btn btn-ghost" id="btnCancelMembershipEdit" style="display:none;">إلغاء التعديل</button>
+                        <button type="button" class="btn btn-ghost" id="btnCancelMembershipEdit"
+                            style="display:none;">إلغاء التعديل</button>
                     </div>
                 </form>
             </div>
             <div class="card">
                 <h3 class="section-title">كل باقات الاشتراك</h3>
-                <div id="membershipsList"><p class="empty-msg">جاري التحميل...</p></div>
+                <div id="membershipsList">
+                    <p class="empty-msg">جاري التحميل...</p>
+                </div>
             </div>
         </div>
 
@@ -245,13 +567,16 @@
                     </div>
                     <div class="actions">
                         <button type="submit" class="btn btn-success" id="btnAddClass">إضافة الكلاس</button>
-                        <button type="button" class="btn btn-ghost" id="btnCancelClassEdit" style="display:none;">إلغاء التعديل</button>
+                        <button type="button" class="btn btn-ghost" id="btnCancelClassEdit" style="display:none;">إلغاء
+                            التعديل</button>
                     </div>
                 </form>
             </div>
             <div class="card">
                 <h3 class="section-title">كل الكلاسات</h3>
-                <div id="classesList"><p class="empty-msg">جاري التحميل...</p></div>
+                <div id="classesList">
+                    <p class="empty-msg">جاري التحميل...</p>
+                </div>
             </div>
         </div>
 
@@ -260,21 +585,37 @@
             <div class="card">
                 <h3 class="section-title">إدارة المستخدمين</h3>
                 <input type="text" id="userSearch" placeholder="ابحث بالاسم أو الإيميل..." style="margin-bottom: 18px;">
-                <div id="usersList"><p class="empty-msg">جاري التحميل...</p></div>
+                <div id="usersList">
+                    <p class="empty-msg">جاري التحميل...</p>
+                </div>
             </div>
         </div>
 
         <!-- Reports -->
         <div class="tab-content" id="tab-reports">
             <div class="stats-grid">
-                <div class="stat-card"><div class="number" id="statUsers">—</div><div class="label">إجمالي المستخدمين</div></div>
-                <div class="stat-card"><div class="number" id="statSubs">—</div><div class="label">الاشتراكات النشطة</div></div>
-                <div class="stat-card"><div class="number" id="statClasses">—</div><div class="label">عدد الكلاسات</div></div>
-                <div class="stat-card"><div class="number" id="statRevenue">—</div><div class="label">الإيرادات التقريبية</div></div>
+                <div class="stat-card">
+                    <div class="number" id="statUsers">—</div>
+                    <div class="label">إجمالي المستخدمين</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statSubs">—</div>
+                    <div class="label">الاشتراكات النشطة</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statClasses">—</div>
+                    <div class="label">عدد الكلاسات</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number" id="statRevenue">—</div>
+                    <div class="label">الإيرادات التقريبية</div>
+                </div>
             </div>
             <div class="card">
                 <h3 class="section-title">آخر الاشتراكات</h3>
-                <div id="recentSubs"><p class="empty-msg">اضغط على تبويب التقارير للتحميل</p></div>
+                <div id="recentSubs">
+                    <p class="empty-msg">اضغط على تبويب التقارير للتحميل</p>
+                </div>
             </div>
         </div>
     </main>
@@ -283,27 +624,84 @@
         const BACKEND_URL = "http://localhost:8000";
         let allAdminUsers = [];
 
-        async function checkAuth() {
-            const token = localStorage.getItem("access_token");
-            if (!token) { window.location.href = "login.html"; return null; }
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
-                    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
                 });
+
                 const data = await res.json();
+                if (!res.ok) {
+                    return null;
+                }
+
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch (err) {
+                console.error("Refresh failed:", err);
+                return null;
+            }
+        }
+
+        async function checkAuth() {
+            let token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return null;
+            }
+
+            try {
+                let res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                // access انتهى → حاول refresh
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) {
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return null;
+                    }
+
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+
+                const data = await res.json();
+
                 if (res.ok && data.Info) {
-                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    const role = (data.Info.Role || data.Info["user-role"] || "")
+                        .toString()
+                        .toLowerCase();
+
                     if (role !== "admin") {
                         alert("هذه الصفحة مخصصة للأدمن فقط");
                         window.location.href = "index.html";
                         return null;
                     }
-                    document.getElementById("nav-username").textContent = `👤 ${data.Info.UserName}`;
+
+                    document.getElementById("nav-username").textContent =
+                        `👤 ${data.Info.UserName}`;
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
                     return token;
                 }
+
                 localStorage.clear();
                 window.location.href = "login.html";
                 return null;
@@ -784,7 +1182,7 @@
                         container.innerHTML = `<p class="empty-msg">لا توجد اشتراكات حديثة</p>`;
                     }
                 } else {
-                    ["statUsers","statSubs","statClasses","statRevenue"].forEach(id => {
+                    ["statUsers", "statSubs", "statClasses", "statRevenue"].forEach(id => {
                         document.getElementById(id).textContent = "—";
                     });
                     container.innerHTML = `<p class="empty-msg">لا يوجد endpoint للتقارير حالياً</p>`;

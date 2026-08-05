@@ -113,7 +113,7 @@ def get_current_user(
         ipaddress = payload.get("ip-address")
         user_role = payload.get("Role")
 
-        if user_email is None or ipaddress != retrieve_client_ip(request):
+        if user_email is None :
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",
