@@ -286,20 +286,70 @@
     <script>
         const BACKEND_URL = "http://localhost:8000";
 
+        function getErrorMessage(result) {
+            if (!result) return "حدث خطأ ما";
+            if (typeof result.detail === "string") return result.detail;
+            if (Array.isArray(result.detail)) {
+                return result.detail.map(e => e.msg || JSON.stringify(e)).join("\n");
+            }
+            if (result.detail && typeof result.detail === "object") {
+                return result.detail.msg || JSON.stringify(result.detail);
+            }
+            return result.message || "حدث خطأ ما";
+        }
+
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                const data = await res.json();
+                if (!res.ok) return null;
+
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch (err) {
+                console.error("Refresh failed:", err);
+                return null;
+            }
+        }
+
         async function checkAuth() {
-            const token = localStorage.getItem("access_token");
+            let token = localStorage.getItem("access_token");
             if (!token) {
                 window.location.href = "login.html";
                 return null;
             }
 
             try {
-                const res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                let res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
                     headers: {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     }
                 });
+
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) {
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return null;
+                    }
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+
                 const data = await res.json();
 
                 if (res.ok && data.Info) {
@@ -308,7 +358,6 @@
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
 
-                    // إظهار زر الأدمن لو الدور Admin
                     const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
                     if (role === "admin") {
                         document.getElementById("adminLink").style.display = "inline-block";
@@ -327,6 +376,46 @@
             }
         }
 
+        async function startPayment(membershipId, btn) {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "جاري التحويل للدفع...";
+
+            try {
+                const res = await fetch(
+                    `${BACKEND_URL}/v1/api/payments/create-checkout-session?pay_type=membership&item_id=${membershipId}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "accept": "application/json"
+                        }
+                    }
+                );
+
+                const result = await res.json();
+
+                if (res.ok && result.checkout_url) {
+                    window.location.href = result.checkout_url;
+                    return;
+                }
+
+                alert("فشل بدء الدفع:\n" + getErrorMessage(result));
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "اشتراك الآن";
+            }
+        }
+
         async function fetchMemberships(token) {
             const container = document.getElementById("membershipsContainer");
 
@@ -340,98 +429,65 @@
                 const result = await res.json();
                 container.innerHTML = "";
 
-                // دعم أكتر من شكل للرد
-                const list = result.data || result.memberships || result || [];
+                const list = result.data || result.memberships || (Array.isArray(result) ? result : []);
 
                 if (res.ok && Array.isArray(list) && list.length > 0) {
                     list.forEach(item => {
                         const hasWalk = item.walk_machine === true || item.walk_machine === "true";
+                        const id = item.MembershipsID || item.id;
 
                         const card = document.createElement("div");
                         card.className = "membership-card";
                         card.innerHTML = `
-                            <div class="card-header">
-                                <h3 class="membership-title">اشتراك جيم</h3>
-                                <span class="duration-badge">${item.duration_months || "—"} شهور</span>
-                            </div>
-                            <div class="membership-price">${item.Price ?? item.price ?? 0} <span>ج.م</span></div>
-                            <p class="membership-desc">${item.description || "استمتع بكافة أجهزة الجيم والدخول الحر طوال فترة الاشتراك."}</p>
-                            <div class="features">
-                                <div class="feature-item ${hasWalk ? "available" : "unavailable"}">
-                                    <span class="icon">${hasWalk ? "✓" : "✕"}</span>
-                                    <span>جهاز المشي ${hasWalk ? "متاح" : "غير متاح"}</span>
-                                </div>
-                                <div class="feature-item available">
-                                    <span class="icon">✓</span>
-                                    <span>دخول حر طوال المدة</span>
-                                </div>
-                            </div>
-                            <button class="subscribe-btn" data-id="${item.MembershipsID || item.id}">اشتراك الآن</button>
-                        `;
+                    <div class="card-header">
+                        <h3 class="membership-title">اشتراك جيم</h3>
+                        <span class="duration-badge">${item.duration_months || "—"} شهور</span>
+                    </div>
+                    <div class="membership-price">${item.Price ?? item.price ?? 0} <span>ج.م</span></div>
+                    <p class="membership-desc">${item.description || "استمتع بكافة أجهزة الجيم والدخول الحر طوال فترة الاشتراك."}</p>
+                    <div class="features">
+                        <div class="feature-item ${hasWalk ? "available" : "unavailable"}">
+                            <span class="icon">${hasWalk ? "✓" : "✕"}</span>
+                            <span>جهاز المشي ${hasWalk ? "متاح" : "غير متاح"}</span>
+                        </div>
+                        <div class="feature-item available">
+                            <span class="icon">✓</span>
+                            <span>دخول حر طوال المدة</span>
+                        </div>
+                    </div>
+                    <button class="subscribe-btn" data-id="${id}">اشتراك الآن</button>
+                `;
                         container.appendChild(card);
                     });
 
-                    // الاشتراك الحقيقي
                     container.querySelectorAll(".subscribe-btn").forEach(btn => {
-                        btn.addEventListener("click", async () => {
+                        btn.addEventListener("click", () => {
                             const membershipId = btn.dataset.id;
                             if (!membershipId) {
                                 alert("معرف الباقة غير موجود");
                                 return;
                             }
-
-                            const token = localStorage.getItem("access_token");
-                            btn.disabled = true;
-                            btn.textContent = "جاري الاشتراك...";
-
-                            try {
-                                const res = await fetch(
-                                    `${BACKEND_URL}/v1/api/membership/subscription/${membershipId}`,
-                                    {
-                                        method: "POST",
-                                        headers: {
-                                            "Authorization": `Bearer ${token}`,
-                                            "Content-Type": "application/json",
-                                            "accept": "application/json"
-                                        }
-                                    }
-                                );
-
-                                const result = await res.json();
-
-                                if (res.ok) {
-                                    alert(result.message || "تم الاشتراك بنجاح يا بطل! 🏋️‍♂️");
-                                } else {
-                                    alert("فشل الاشتراك: " + (result.detail || "حدث خطأ ما"));
-                                }
-                            } catch (err) {
-                                console.error(err);
-                                alert("تعذر الاتصال بالسيرفر");
-                            } finally {
-                                btn.disabled = false;
-                                btn.textContent = "اشتراك الآن";
-                            }
+                            startPayment(membershipId, btn);
                         });
                     });
                 } else {
                     container.innerHTML = `
-                        <div class="empty-state">
-                            <h3>لا توجد اشتراكات حالياً</h3>
-                            <p>يرجى المحاولة لاحقاً</p>
-                        </div>
-                    `;
+                <div class="empty-state">
+                    <h3>لا توجد اشتراكات حالياً</h3>
+                    <p>يرجى المحاولة لاحقاً</p>
+                </div>
+            `;
                 }
             } catch (err) {
                 console.error(err);
                 container.innerHTML = `
-                    <div class="empty-state">
-                        <h3>حدث خطأ أثناء تحميل الاشتراكات</h3>
-                        <p>تحقق من الاتصال بالسيرفر</p>
-                    </div>
-                `;
+            <div class="empty-state">
+                <h3>حدث خطأ أثناء تحميل الاشتراكات</h3>
+                <p>تحقق من الاتصال بالسيرفر</p>
+            </div>
+        `;
             }
         }
-
         document.getElementById("logoutBtn").addEventListener("click", () => {
             localStorage.clear();
             window.location.href = "login.html";

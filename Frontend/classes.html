@@ -268,6 +268,55 @@
             }
         }
 
+        async function startClassPayment(classId, btn) {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "جاري التحويل للدفع...";
+
+            try {
+                const res = await fetch(
+                    `${BACKEND_URL}/v1/api/payments/create-checkout-session?pay_type=class&item_id=${classId}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "accept": "application/json"
+                        }
+                    }
+                );
+
+                const result = await res.json();
+
+                if (res.ok && result.checkout_url) {
+                    window.location.href = result.checkout_url;
+                    return;
+                }
+
+                let message = "فشل بدء الدفع";
+                if (typeof result.detail === "string") {
+                    message = result.detail;
+                } else if (Array.isArray(result.detail)) {
+                    message = result.detail.map(e => e.msg || JSON.stringify(e)).join("\n");
+                } else if (result.message) {
+                    message = result.message;
+                }
+
+                alert(message);
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "انضم للكلاس";
+            }
+        }
+
         async function fetchClasses(token) {
             const container = document.getElementById("classesContainer");
 
@@ -281,109 +330,84 @@
                 const result = await res.json();
                 container.innerHTML = "";
 
-                // دعم أكتر من شكل للرد
-                const list = result.data || result.classes || result || [];
+                const list = result.data || result.classes || (Array.isArray(result) ? result : []);
 
                 if (res.ok && Array.isArray(list) && list.length > 0) {
                     list.forEach(item => {
                         const card = document.createElement("div");
                         card.className = "class-card";
 
-                        // تنسيق التاريخ بأمان
+                        // التاريخ
                         let dateStr = "—";
                         if (item.Date) {
                             try {
-                                const d = new Date(item.Date);
-                                if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+                                const raw = String(item.Date).trim();
+                                const datePart = raw.split("T")[0].split(" ")[0];
+                                const d = new Date(datePart);
+                                if (!isNaN(d.getTime()) && d.getFullYear() > 1970 && d.getFullYear() < 2100) {
                                     dateStr = d.toLocaleDateString("ar-EG");
                                 } else {
-                                    // لو التاريخ جاي string زي "2026-07-28"
-                                    dateStr = String(item.Date).split("T")[0];
+                                    dateStr = datePart || "—";
                                 }
                             } catch {
                                 dateStr = String(item.Date).split("T")[0] || "—";
                             }
                         }
 
-                        // المدرب: لو في اسم استخدمه، غير كده اختصر الـ ID
-                        const trainerDisplay = item.trainer_name
-                            || item.TrainerName
-                            || (item.Trainer_id ? item.Trainer_id.slice(0, 8) + "..." : "غير محدد");
+                        // الوقت
+                        const timeStr = (item.Start_time && item.End_time)
+                            ? `${item.Start_time} → ${item.End_time}`
+                            : "—";
+
+                        // المدرب
+                        const trainerDisplay =
+                            (item.trainer && item.trainer.UserName) ||
+                            item.trainer_name ||
+                            item.TrainerName ||
+                            (item.Trainer_id ? item.Trainer_id.slice(0, 8) + "..." : "غير محدد");
+
+                        const classId = item.ClassesID || item.id || "";
 
                         card.innerHTML = `
-        <h3 class="class-title">${item.ClassName || "كلاس"}</h3>
-        <div class="class-meta">
-            <span>🏷️ ${item.TypeClass || "—"}</span>
-            <span>💰 ${item.Price ?? "—"} ج.م</span>
-            <span>📅 ${dateStr}</span>
-            <span>🕒 ${item.End_time || "—"} → ${item.Start_time || "—"}</span>
-        </div>
-        <p class="class-desc">المدرب: ${item.trainer ? item.trainer.UserName : "غير محدد"}</p>
-        <button class="join-btn" data-id="${item.ClassesID || item.id || ""}">
-            انضم للكلاس
-        </button>
-    `;
+                    <h3 class="class-title">${item.ClassName || "كلاس"}</h3>
+                    <div class="class-meta">
+                        <span>🏷️ ${item.TypeClass || "—"}</span>
+                        <span>💰 ${item.Price ?? "—"} ج.م</span>
+                        <span>📅 ${dateStr}</span>
+                        <span>🕒 ${timeStr}</span>
+                    </div>
+                    <p class="class-desc">المدرب: ${trainerDisplay}</p>
+                    <button class="join-btn" data-id="${classId}">انضم للكلاس</button>
+                `;
                         container.appendChild(card);
                     });
 
                     container.querySelectorAll(".join-btn").forEach(btn => {
-                        btn.addEventListener("click", async () => {
+                        btn.addEventListener("click", () => {
                             const classId = btn.dataset.id;
                             if (!classId) {
                                 alert("معرف الكلاس غير موجود");
                                 return;
                             }
-
-                            const token = localStorage.getItem("access_token");
-                            btn.disabled = true;
-                            btn.textContent = "جاري التسجيل...";
-
-                            try {
-                                // غيّر الـ endpoint لو عندك endpoint مختلف للانضمام
-                                const res = await fetch(
-                                    `${BACKEND_URL}/v1/api/classes/${classId}/booking`,
-                                    {
-                                        method: "POST",
-                                        headers: {
-                                            "Authorization": `Bearer ${token}`,
-                                            "Content-Type": "application/json"
-                                        }
-                                    }
-                                );
-
-                                const result = await res.json();
-
-                                if (res.ok) {
-                                    alert(result.message || "تم التسجيل في الكلاس بنجاح ✓");
-                                } else {
-                                    alert("فشل التسجيل: " + (result.detail || "حدث خطأ"));
-                                }
-                            } catch (err) {
-                                console.error(err);
-                                // لو مفيش endpoint، نعرض رسالة مؤقتة
-                                alert("تم إرسال طلب الانضمام للكلاس رقم: " + classId);
-                            } finally {
-                                btn.disabled = false;
-                                btn.textContent = "انضم للكلاس";
-                            }
+                            startClassPayment(classId, btn);
                         });
                     });
                 } else {
                     container.innerHTML = `
-                        <div class="empty-state">
-                            <h3>لا توجد كلاسات حالياً</h3>
-                            <p>يرجى المحاولة لاحقاً</p>
-                        </div>
-                    `;
+                <div class="empty-state">
+                    <h3>لا توجد كلاسات حالياً</h3>
+                    <p>يرجى المحاولة لاحقاً</p>
+                </div>
+            `;
                 }
             } catch (err) {
                 console.error(err);
                 container.innerHTML = `
-                    <div class="empty-state">
-                        <h3>حدث خطأ أثناء تحميل الكلاسات</h3>
-                        <p>تحقق من الاتصال بالسيرفر</p>
-                    </div>
-                `;
+            <div class="empty-state">
+                <h3>حدث خطأ أثناء تحميل الكلاسات</h3>
+                <p>تحقق من الاتصال بالسيرفر</p>
+            </div>
+        `;
             }
         }
 

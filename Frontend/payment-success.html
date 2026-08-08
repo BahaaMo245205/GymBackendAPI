@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تم الدفع بنجاح - نظام الجيم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 480px;
+            padding: 40px 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            text-align: center;
+        }
+
+        .icon {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            background: #dcfce7;
+            color: #16a34a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .icon.pending-icon {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        h1 {
+            color: #16a34a;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        h1.pending-title {
+            color: #d97706;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 18px;
+        }
+
+        .info {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 22px;
+            text-align: right;
+            font-size: 13px;
+            color: #334155;
+        }
+
+        .info div {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .info div:last-child {
+            margin-bottom: 0;
+        }
+
+        .info strong {
+            color: #1e293b;
+            word-break: break-all;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        a {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status.paid {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.unknown {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .hint {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="icon" id="icon">✓</div>
+        <h1 id="title">تم الدفع بنجاح</h1>
+        <p class="subtitle" id="message">
+            شكرًا لك! جاري تأكيد العملية وتفعيل طلبك.
+        </p>
+
+        <div class="info">
+            <div>
+                <span>حالة الدفع</span>
+                <span>
+                    <strong id="paymentStatus">...</strong>
+                    <span class="status unknown" id="statusBadge">...</span>
+                </span>
+            </div>
+            <div>
+                <span>نوع العملية</span>
+                <strong id="payType">—</strong>
+            </div>
+            <div>
+                <span>رقم الجلسة</span>
+                <strong id="sessionId">—</strong>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a class="btn-primary" id="primaryLink" href="profile.html">الملف الشخصي</a>
+            <a class="btn-secondary" href="index.html">الرئيسية</a>
+        </div>
+
+        <p class="hint">
+            التفعيل النهائي بيتم من السيرفر بعد تأكيد Stripe (Webhook).
+            لو الحالة لسه قيد المعالجة، حدّث الصفحة بعد لحظات.
+        </p>
+    </div>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get("session_id");
+
+        const messageEl = document.getElementById("message");
+        const statusEl = document.getElementById("paymentStatus");
+        const badgeEl = document.getElementById("statusBadge");
+        const sessionEl = document.getElementById("sessionId");
+        const payTypeEl = document.getElementById("payType");
+        const titleEl = document.getElementById("title");
+        const iconEl = document.getElementById("icon");
+        const primaryLink = document.getElementById("primaryLink");
+
+        sessionEl.textContent = sessionId || "—";
+
+        function setStatus(text, type) {
+            statusEl.textContent = text;
+            badgeEl.textContent = text;
+            badgeEl.className = "status " + type;
+
+            if (type === "pending") {
+                titleEl.textContent = "الدفع قيد التأكيد";
+                titleEl.classList.add("pending-title");
+                iconEl.textContent = "!";
+                iconEl.classList.add("pending-icon");
+            } else if (type === "paid") {
+                titleEl.textContent = "تم الدفع بنجاح";
+                titleEl.classList.remove("pending-title");
+                iconEl.textContent = "✓";
+                iconEl.classList.remove("pending-icon");
+            }
+        }
+
+        function setPayType(type) {
+            if (type === "membership") {
+                payTypeEl.textContent = "اشتراك عضوية";
+                primaryLink.href = "profile.html";
+                primaryLink.textContent = "عرض اشتراكاتي";
+            } else if (type === "class") {
+                payTypeEl.textContent = "حجز كلاس";
+                primaryLink.href = "profile.html";
+                primaryLink.textContent = "عرض حجوزاتي";
+            } else {
+                payTypeEl.textContent = type || "—";
+            }
+        }
+
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                const data = await res.json();
+                if (!res.ok) return null;
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch {
+                return null;
+            }
+        }
+
+        (async function init() {
+            if (!sessionId) {
+                setStatus("غير معروف", "unknown");
+                messageEl.textContent = "تمت العملية. لو دفعت بالفعل، الطلب هيتفعل خلال لحظات.";
+                return;
+            }
+
+            let token = localStorage.getItem("access_token");
+            if (!token) {
+                setStatus("تم الاستلام", "pending");
+                messageEl.textContent = "تم الدفع. سجّل الدخول عشان تتابع طلبك.";
+                primaryLink.href = "login.html";
+                primaryLink.textContent = "تسجيل الدخول";
+                return;
+            }
+
+            try {
+                let res = await fetch(
+                    `${BACKEND_URL}/v1/api/payments/session/${sessionId}`,
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (newToken) {
+                        token = newToken;
+                        res = await fetch(
+                            `${BACKEND_URL}/v1/api/payments/session/${sessionId}`,
+                            {
+                                headers: {
+                                    "Authorization": `Bearer ${token}`,
+                                    "Content-Type": "application/json"
+                                }
+                            }
+                        );
+                    }
+                }
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    const paymentStatus = data.payment_status || "unknown";
+                    setPayType(data.type);
+
+                    if (paymentStatus === "paid") {
+                        setStatus("مدفوع", "paid");
+                        messageEl.textContent =
+                            data.type === "class"
+                                ? "تم تأكيد الدفع. حجز الكلاس هيظهر خلال لحظات."
+                                : "تم تأكيد الدفع. اشتراكك هيظهر في الملف الشخصي خلال لحظات.";
+                    } else {
+                        setStatus(paymentStatus, "pending");
+                        messageEl.textContent = "الدفع قيد المعالجة. حدّث الصفحة بعد قليل.";
+                    }
+                } else {
+                    setStatus("قيد التفعيل", "pending");
+                    messageEl.textContent = "استلمنا العملية. التفعيل النهائي من السيرفر بعد تأكيد Stripe.";
+                }
+            } catch (err) {
+                console.error(err);
+                setStatus("تم الاستلام", "pending");
+                messageEl.textContent = "تم الدفع. راجع الملف الشخصي بعد لحظات.";
+            }
+        })();
+    </script>
+</body>
+
+</html>

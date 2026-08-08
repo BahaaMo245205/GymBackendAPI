@@ -169,6 +169,34 @@
             line-height: 1.6;
         }
 
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 28px;
+        }
+
+        .quick-actions a {
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .btn-light {
+            background: #fff;
+            color: #2563eb;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #fff;
+            border: 1.5px solid rgba(255, 255, 255, 0.7);
+        }
+
         #loader {
             text-align: center;
             color: #64748b;
@@ -208,6 +236,10 @@
                 نظام متكامل يساعدك على إدارة اشتراكاتك، متابعة الكلاسات،
                 وتحديث بياناتك الشخصية بكل سهولة وسرعة.
             </p>
+            <div class="quick-actions">
+                <a class="btn-light" href="memberships.html">عرض الاشتراكات</a>
+                <a class="btn-outline" href="classes.html">الكلاسات</a>
+            </div>
         </div>
 
         <h2 class="section-title">مميزات النظام</h2>
@@ -255,9 +287,7 @@
                 });
 
                 const data = await res.json();
-                if (!res.ok) {
-                    return null;
-                }
+                if (!res.ok) return null;
 
                 localStorage.setItem("access_token", data.access_token);
                 return data.access_token;
@@ -282,7 +312,6 @@
                     }
                 });
 
-                // access انتهى → حاول refresh
                 if (res.status === 401) {
                     const newToken = await refreshAccessToken();
                     if (!newToken) {
@@ -303,21 +332,21 @@
                 const data = await res.json();
 
                 if (res.ok && data.Info) {
-                    const role = (data.Info.Role || data.Info["user-role"] || "")
-                        .toString()
-                        .toLowerCase();
-
-                    if (role !== "admin") {
-                        alert("هذه الصفحة مخصصة للأدمن فقط");
-                        window.location.href = "index.html";
-                        return null;
-                    }
-
+                    // أي مستخدم مسجّل يدخل الرئيسية
                     document.getElementById("nav-username").textContent =
                         `👤 ${data.Info.UserName}`;
                     document.getElementById("loader").style.display = "none";
                     document.getElementById("navbar").style.display = "flex";
                     document.getElementById("content").style.display = "block";
+
+                    // زر الأدمن يظهر للأدمن فقط
+                    const role = (data.Info.Role || data.Info["user-role"] || "")
+                        .toString()
+                        .toLowerCase();
+                    if (role === "admin") {
+                        document.getElementById("adminLink").style.display = "inline-block";
+                    }
+
                     return token;
                 }
 
@@ -331,15 +360,12 @@
             }
         }
 
-        // تسجيل الخروج
         document.getElementById("logoutBtn").addEventListener("click", () => {
             localStorage.clear();
             window.location.href = "login.html";
         });
 
         checkAuth();
-        console.log("access", localStorage.getItem("access_token")?.slice(0, 30));
-        console.log("refresh", localStorage.getItem("refresh_token")?.slice(0, 30));
     </script>
 </body>
 

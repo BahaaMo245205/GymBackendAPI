@@ -12,5 +12,6 @@ Explain Codes/
 .venv
 .env
 *.json
+*.md
 alembic.ini
 app.log

@@ -13,6 +13,7 @@ Gunicorn
 aiomysql
 alembic
 pymysql
+pillow
 stripe
 bcrypt
 redis

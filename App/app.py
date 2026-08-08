@@ -1,55 +1,58 @@
-from .limiter import custom_rate_limit_handler, limiter
-from fastapi.middleware.cors import CORSMiddleware
-from App.Database.db import create_db_and_table
-from slowapi.errors import RateLimitExceeded
-from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-from App.redis_client import redis_client
-from fastapi import FastAPI
 from pathlib import Path
 import logging
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
+
+from App.Database.db import create_db_and_table
+from App.redis_client import redis_client
+from .limiter import custom_rate_limit_handler, limiter
+
+# ---------- Logging ----------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - (%(levelname)s)-> %(message)s",
-    filemode="a",
     filename="app.log",
+    filemode="a",
     encoding="utf-8",
 )
 logger = logging.getLogger(__name__)
 
 
+# ---------- Lifespan ----------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global redis_client
-
-    logger.info("Starting up and connecting to services...")
+    logger.info("Starting up...")
 
     await create_db_and_table()
+    logger.info("Database ready")
 
     try:
         await redis_client.ping()
-        logger.info("Successfully connected to Redis! 🟢")
+        logger.info("Redis connected")
     except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
-
-    logger.info("Running app smoothly...")
+        logger.error(f"Redis connection failed: {e}")
 
     yield
 
-    logger.info("Shutting down and cleaning up...")
-
-    if redis_client:
+    logger.info("Shutting down...")
+    try:
         await redis_client.close()
-        logger.info("Redis connection closed. 🔴")
+        logger.info("Redis closed")
+    except Exception as e:
+        logger.error(f"Redis close error: {e}")
 
-    logger.info("App shutdown complete.")
+    logger.info("Shutdown complete")
 
 
+# ---------- OpenAPI tags ----------
 tags_metadata = [
     {
         "name": "Auth",
-        "description": "تسجيل الدخول، التسجيل، والتحقق من الهوية باستخدام JWT.",
+        "description": "تسجيل الدخول، التسجيل، Google OAuth، والتحقق من الهوية باستخدام JWT.",
     },
     {
         "name": "User",
@@ -61,21 +64,28 @@ tags_metadata = [
     },
     {
         "name": "Membership",
-        "description": "عرض الباقات، الاشتراك، وإدارة اشتراكات المستخدم.",
+        "description": "عرض الباقات وإدارة اشتراكات المستخدم.",
     },
     {
         "name": "Classes",
-        "description": "عرض الكلاسات، الإنضمام، وإدارة الحصص الرياضية.",
+        "description": "عرض الكلاسات وإدارة الحصص الرياضية.",
+    },
+    {
+        "name": "Payments",
+        "description": "Stripe Checkout وWebhook لتفعيل الاشتراكات وحجوزات الكلاسات.",
     },
 ]
+
+
+# ---------- App ----------
 app = FastAPI(
     title="سيستم إدارة الجيم الاحترافي 🏋️‍♂️ REST API",
     description="""
-الـ Backend الرئيسي لإدارة الصالات الرياضية، الاشتراكات، الكلاسات، والمستخدمين.
+الـ Backend الرئيسي لإدارة الصالات الرياضية، الاشتراكات، الكلاسات، والمدفوعات.
 
-### الميزات:
+### الميزات
 - حماية المسارات بـ JWT + Bearer Auth
-- إدارة الاشتراكات والكلاسات
+- اشتراكات وكلاسات مع Stripe
 - تقارير للأدمن
 - صلاحيات حسب الدور (User / Trainer / Admin)
 """,
@@ -95,6 +105,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+# ---------- Middleware ----------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -103,37 +115,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------- Rate limit ----------
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
 
+
+# ---------- Static files ----------
 BASE_DIR = Path(__file__).resolve().parent
-static_profiles = BASE_DIR / "static"
+STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-app.mount("/static", StaticFiles(directory=str(static_profiles)), name="static")
 
-
-from App.routes.classes import classes_router
-
-app.include_router(classes_router.classes_router)
-
-from App.routes.users import user_router
-
-app.include_router(user_router.router_user)
-
-from App.routes.admin import admin
-
-app.include_router(admin.router_admin)
-
+# ---------- Routers ----------
 from App.routes.auth import auth
-
-app.include_router(auth.auth_router)
-
+from App.routes.users import user_router
+from App.routes.admin import admin
 from App.routes.membership import route
-
-app.include_router(route.router_membership)
-
+from App.routes.classes import classes_router
 from App.routes.payment import router
 
+app.include_router(auth.auth_router)
+app.include_router(user_router.router_user)
+app.include_router(admin.router_admin)
+app.include_router(route.router_membership)
+app.include_router(classes_router.classes_router)
 app.include_router(router.router_payment)
-
-
