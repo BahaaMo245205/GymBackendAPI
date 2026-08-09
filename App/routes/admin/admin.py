@@ -1,23 +1,21 @@
+import json
+
+from fastapi import APIRouter, Depends, Path
+from sqlalchemy import desc, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ...app import logger, redis_client
+from ...Database.db import Classes, Memberships, Subscriptions
+from ...Database.db import Users as Us
+from ...Database.db import get_async_session
+from .helper import *
 from .models import (
-    MembershipDetails,
-    UserStatusUpdate,
     ClassCreateSchema,
     ClassUpdateSchema,
+    MembershipDetails,
     RoleUpdateSchema,
+    UserStatusUpdate,
 )
-from ...Database.db import (
-    get_async_session,
-    Memberships,
-    Subscriptions,
-    Users as Us,
-    Classes,
-)
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, Path
-from sqlalchemy import select, func, desc
-from ...app import logger, redis_client
-from .helper import *
-import json
 
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
 
@@ -47,7 +45,7 @@ async def get_all_users(
     try:
         query = select(Us)
         result = await session.execute(query)
-        users = result.scalars().all()  # ← المهم
+        users = result.scalars().all()
 
         users_list = []
         for user in users:
@@ -55,7 +53,8 @@ async def get_all_users(
                 {
                     "UserID": user.UserID,
                     "UserName": user.UserName,
-                    "Email": getattr(user, "Email", None) or getattr(user, "email", None),
+                    "Email": getattr(user, "Email", None)
+                    or getattr(user, "email", None),
                     "Role": user.Role,
                     "profile_image": getattr(user, "profile_image", None),
                     "is_active": getattr(user, "is_active", True),
@@ -85,7 +84,6 @@ async def get_all_users(
         )
 
 
-# ✅
 @router_admin.post("/memberships", status_code=status.HTTP_201_CREATED)
 async def membership_management(
     membership_details: MembershipDetails,
@@ -123,7 +121,6 @@ async def membership_management(
         )
 
 
-# ✅
 @router_admin.put("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
 async def update_membership(
     membership_id: str = Path(..., title="ID الخاص بالباقة"),
@@ -159,7 +156,6 @@ async def update_membership(
         raise HTTPException(status_code=500, detail="مشكلة في تحديث البيانات")
 
 
-# ✅
 @router_admin.delete("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
 async def delete_membership(
     membership_id: str,
@@ -214,7 +210,6 @@ async def delete_membership(
         )
 
 
-# ❌
 @router_admin.patch("/ChangeRole/{UserID}", status_code=status.HTTP_200_OK)
 async def change_user_role(
     UserID: str,
@@ -259,6 +254,7 @@ async def change_user_role(
             f"Admin {admin_id} changed role of user {UserID} from {old_role} to {db_user.Role}"
         )
         await redis_client.delete("all_system_users")
+        await redis_client.delete("all_trainers")
         return {
             "status": "success",
             "message": f"تم بنجاح تغيير صلاحية المستخدم إلى: {db_user.Role}",
@@ -300,7 +296,6 @@ async def get_admin_role_info(
     }
 
 
-# ✅
 @router_admin.get("/Reports", status_code=status.HTTP_200_OK)
 async def get_system_reports(
     session: AsyncSession = Depends(get_async_session),
@@ -379,7 +374,6 @@ async def get_system_reports(
         )
 
 
-# ❌
 @router_admin.patch("/users/{user_id}/status", status_code=status.HTTP_200_OK)
 async def update_user_status(
     user_id: str,

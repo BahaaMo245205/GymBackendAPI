@@ -1,6 +1,6 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from App.Database.db import create_db_and_table
 from App.redis_client import redis_client
+
 from .limiter import custom_rate_limit_handler, limiter
 
 # ---------- Logging ----------
@@ -127,13 +128,14 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+from App.routes.admin import admin
+
 # ---------- Routers ----------
 from App.routes.auth import auth
-from App.routes.users import user_router
-from App.routes.admin import admin
-from App.routes.membership import route
 from App.routes.classes import classes_router
+from App.routes.membership import route
 from App.routes.payment import router
+from App.routes.users import user_router
 
 app.include_router(auth.auth_router)
 app.include_router(user_router.router_user)

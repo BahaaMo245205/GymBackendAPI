@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, EmailStr, model_validator
 from typing import Self
+
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class RegisterSchema(BaseModel):

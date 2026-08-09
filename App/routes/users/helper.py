@@ -1,11 +1,12 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, Depends, status
-from fastapi.requests import Request
-from dotenv import load_dotenv
-from typing import Annotated
-from jose import jwt
 import hashlib
 import os
+from typing import Annotated
+
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.requests import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import jwt
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -64,7 +65,7 @@ def get_current_user(
         user_name = payload.get("UserName")
         ipaddress = payload.get("ip-address")
         user_role = payload.get("Role")
-        
+
         if user_email is None or ipaddress != retrieve_client_ip(request):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

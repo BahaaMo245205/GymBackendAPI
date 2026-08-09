@@ -1,12 +1,14 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, Depends, status
-from fastapi.requests import Request
-from dotenv import load_dotenv
-from typing import Annotated
-from ...app import logger
-from jose import jwt
 import hashlib
 import os
+from typing import Annotated
+
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.requests import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import jwt
+
+from ...app import logger
 
 security_scheme = HTTPBearer()
 

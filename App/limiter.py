@@ -1,8 +1,8 @@
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
-from fastapi import Request
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 limiter = Limiter(
     key_func=get_remote_address,

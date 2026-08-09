@@ -1,37 +1,32 @@
-from App.routes.users.helper import (
-    generate_password_hash,
-    validate_password,
-    get_current_user,
-)
-from App.Database.db import (
-    get_async_session,
-    Subscriptions,
-    UserProfile,
-    Booking,
-    Classes,
-    Users,
-)
-from fastapi import (
-    HTTPException,
-    UploadFile,
-    APIRouter,
-    Depends,
-    status,
-    Body,
-    File,
-)
-from App.routes.users.model import ChangePassword, InformationUser
-from sqlalchemy.ext.asyncio import AsyncSession
-from ...app import logger, redis_client
-from sqlalchemy import select, update
-from dotenv import load_dotenv
-from typing import Annotated
-from pathlib import Path
-from jose import jwt
 import datetime
 import json
-import uuid
 import os
+import uuid
+from pathlib import Path
+from PIL import Image
+
+from dotenv import load_dotenv
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, status
+from jose import jwt
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from App.Database.db import (
+    Booking,
+    Classes,
+    Subscriptions,
+    UserProfile,
+    Users,
+    get_async_session,
+)
+from App.routes.users.helper import (
+    generate_password_hash,
+    get_current_user,
+    validate_password,
+)
+from App.routes.users.model import ChangePassword, InformationUser
+
+from ...app import logger, redis_client
 
 router_user = APIRouter(prefix="/v1/api/user", tags=["User"])
 
@@ -114,7 +109,7 @@ async def ProfileUser(
 @router_user.put("/me/update")
 async def UpdateProfile(
     user_data: InformationUser,
-    IdUser:dict=Depends(get_current_user),
+    IdUser: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
     await redis_client.delete(f"user:profile:{IdUser.get("ID")}")
@@ -233,7 +228,7 @@ async def get_my_bookings(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-    
+
     user_id = current_user.get("ID") or current_user.get("UserID")
     cache_key = f"user:bookings:{user_id}"
     try:
@@ -273,7 +268,9 @@ async def get_my_bookings(
             )
 
         await redis_client.set(cache_key, json.dumps(bookings_data), ex=3600)
-        logger.info(f"Bookings loaded from DB | user_id={user_id} | count={len(bookings_data)}")
+        logger.info(
+            f"Bookings loaded from DB | user_id={user_id} | count={len(bookings_data)}"
+        )
 
         return {
             "status": "success",
@@ -307,19 +304,17 @@ async def refresh_session(
         if not user_id:
             raise HTTPException(status_code=401, detail="توكن غير صالح")
 
-        result = await session.execute(
-            select(Users).where(Users.UserID == user_id)
-        )
+        result = await session.execute(select(Users).where(Users.UserID == user_id))
         user = result.scalar_one_or_none()
 
         if not user:
             raise HTTPException(status_code=401, detail="المستخدم غير موجود")
 
-
         new_access_payload = {
             "ID": user.UserID,
             "Email": getattr(user, "Email", None) or getattr(user, "email", None),
-            "UserName": getattr(user, "UserName", None) or getattr(user, "username", None),
+            "UserName": getattr(user, "UserName", None)
+            or getattr(user, "username", None),
             "Role": getattr(user, "Role", None) or getattr(user, "role", "User"),
             "ip-address": ip_address,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
@@ -355,6 +350,7 @@ async def refresh_session(
         logger.error(f"Refresh error: {e}")
         raise HTTPException(status_code=401, detail="توكن غير صالح")
 
+
 @router_user.post("/upload-profile-image")
 async def upload_profile_image(
     file: UploadFile = File(...),
@@ -373,7 +369,7 @@ async def upload_profile_image(
 
     ext = (file.filename or "img.jpg").rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        logger.warning(f"امتداد الصورة غير مدعوم. {current_user.get('ID')}")
+        logger.warning(f"امتداد الصورة غير مدعوم. {current_user.get('ID')} | {ext}")
         raise HTTPException(status_code=400, detail="امتداد الصورة غير مدعوم.")
 
     unique_filename = f"{uuid.uuid4().hex}.{ext}"
@@ -388,8 +384,9 @@ async def upload_profile_image(
                 status_code=400, detail="حجم الصورة كبير جدًا (الحد 5MB)."
             )
 
-        with open(file_path, "wb") as buffer:
-            buffer.write(content)
+        with Image.open(file_path) as buffer:
+            buffer.resize(200, 200)
+            buffer.save(file_path)
             logger.info("تم حفظ الصورة بنجاح")
 
         await session.execute(
@@ -410,7 +407,8 @@ async def upload_profile_image(
             "filename": unique_filename,
         }
     except HTTPException:
-        raise
+        await session.rollback()
     except Exception as e:
+        logger.error(f"Error uploading image: {e}")
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Error: {e}")

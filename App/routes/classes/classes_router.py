@@ -1,12 +1,14 @@
-from ...Database.db import get_async_session, Classes, Booking
-from fastapi import APIRouter, status, HTTPException, Depends
+import json
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from .helper import get_current_user_id
+
 from ...app import logger, redis_client
-from sqlalchemy import select
-from datetime import datetime
-import json
+from ...Database.db import Booking, Classes, get_async_session
+from .helper import get_current_user_id
 
 classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 

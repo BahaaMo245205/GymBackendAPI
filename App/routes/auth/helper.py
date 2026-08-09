@@ -1,14 +1,17 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from datetime import datetime, timezone, timedelta
-from fastapi import HTTPException, Depends, status
-from passlib.context import CryptContext
-from fastapi.requests import Request
-from dotenv import load_dotenv
-from jose import jwt, JWTError
-from typing import Annotated
-from ...app import logger
 import hashlib
 import os
+from datetime import datetime, timedelta, timezone
+from typing import Annotated
+
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.requests import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from ...app import logger
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -16,6 +19,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 security_scheme = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 def generate_password_hash(password: Annotated[str, None]) -> str:
     """Create password hash"""
@@ -37,7 +41,7 @@ def validate_password(hashedPassword: str, password: str) -> bool:
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
     if hashedPassword == hash_password:
         return True
-    
+
     # hash_password = pwd_context.hash(hash_password)
     # if pwd_context.verify(hash_password, hashedPassword):
     #     return True
@@ -113,7 +117,7 @@ def get_current_user(
         ipaddress = payload.get("ip-address")
         user_role = payload.get("Role")
 
-        if user_email is None :
+        if user_email is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",

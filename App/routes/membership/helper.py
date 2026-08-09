@@ -1,11 +1,12 @@
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import HTTPException, Depends, status
-from fastapi.requests import Request
-from dotenv import load_dotenv
-from ...app import logger
-from jose import jwt
 import os
 
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.requests import Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import jwt
+
+from ...app import logger
 
 load_dotenv()
 

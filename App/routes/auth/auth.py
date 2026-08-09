@@ -1,31 +1,34 @@
-from App.routes.auth.models import (
-    ForgotPasswordSchema,
-    ResetPasswordSchema,
-    RegisterSchema,
-    LoginSchema,
-)
+import os
+from urllib.parse import urlencode
+
+import httpx
+from dotenv import load_dotenv
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.requests import Request
+from fastapi.responses import RedirectResponse
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from App.Database.db import Users, get_async_session
 from App.routes.auth.helper import (
-    generate_password_hash,
     create_access_token,
     create_reset_token,
-    verify_reset_token,
+    generate_password_hash,
+    get_current_user,
     retrieve_client_ip,
     validate_password,
-    get_current_user,
+    verify_reset_token,
 )
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from App.Database.db import get_async_session, Users
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import RedirectResponse
-from fastapi.requests import Request
-from ...limiter import limiter
-from urllib.parse import urlencode
-from dotenv import load_dotenv
-from sqlalchemy import select
+from App.routes.auth.models import (
+    ForgotPasswordSchema,
+    LoginSchema,
+    RegisterSchema,
+    ResetPasswordSchema,
+)
+
 from ...app import logger
-import httpx
-import os
+from ...limiter import limiter
 
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -145,8 +148,8 @@ async def register(
 
 @auth_router.post("/forgot-password")
 async def forgot_password(email: ForgotPasswordSchema):
-    try :
-            
+    try:
+
         token = create_reset_token(email.email)
         reset_link = f"http://localhost:5500/Frontend/reset-password.html?token={token}"
 
@@ -168,12 +171,12 @@ async def forgot_password(email: ForgotPasswordSchema):
     except Exception as e:
         logger.error(f"Error : {e}")
         raise HTTPException(status_code=500, detail=f"Error : {e}")
-    
+
 
 @auth_router.post("/reset-password")
 async def reset_password(
     token: str = Query(..., alias="token"),
-    data: ResetPasswordSchema=None,
+    data: ResetPasswordSchema = None,
     session: AsyncSession = Depends(get_async_session),
 ):
 
