@@ -3,27 +3,21 @@ from datetime import datetime, timedelta
 
 import stripe
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from ...app import logger
-from ...Database.db import (
-    Booking,
-    Classes,
-    Memberships,
-    Payments,
-    Subscriptions,
-    get_async_session,
-)
+from ...Database.db import (Booking, Classes, Memberships, Payments,
+                            Subscriptions, get_async_session)
 from ...redis_client import redis_client
 from ..users.helper import get_current_user
 
 load_dotenv()
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500/Frontend")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5501")
 
 router_payment = APIRouter(prefix="/v1/api/payments", tags=["Payments"])
 
@@ -81,12 +75,23 @@ async def create_checkout_session(
             logger.warning("الكلاس غير موجود")
             raise HTTPException(status_code=404, detail="الكلاس غير موجود")
 
+        active = await session.execute(
+            select(Booking).where(
+                Booking.UserID == user_id,
+                Booking.Is_active == True,
+            )
+        )
+
+        if active.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="لديك حجز كلاس من قبل"
+            )
         name = item.ClassName
         description = f"{item.TypeClass} | {item.Start_time} - {item.End_time}"
         price = int(item.Price)
 
     amount = price * 100
-    frontend = os.getenv("FRONTEND_URL", "http://localhost:5500/Frontend")
+    frontend = os.getenv("FRONTEND_URL", "http://localhost:5501")
 
     try:
         checkout = stripe.checkout.Session.create(
@@ -192,7 +197,6 @@ async def stripe_webhook(
         checkout = event["data"]["object"]
         logger.info(f"Webhook | checkout={checkout}")
 
-        # ---- metadata بدون dict() ----
         raw_meta = getattr(checkout, "metadata", None)
         if raw_meta is None and isinstance(checkout, dict):
             raw_meta = checkout.get("metadata")
@@ -204,7 +208,6 @@ async def stripe_webhook(
         elif hasattr(raw_meta, "to_dict"):
             meta = raw_meta.to_dict()
         else:
-            # StripeObject: اقرأ بالمفاتيح النصية فقط
             meta = {}
             try:
                 for key in raw_meta.keys():
@@ -290,7 +293,22 @@ async def get_session_status(
 ):
     try:
         s = stripe.checkout.Session.retrieve(session_id)
-        meta = dict(s.metadata or {})
+
+        raw_meta = getattr(s, "metadata", None)
+        if raw_meta is None:
+            meta = {}
+        elif isinstance(raw_meta, dict):
+            meta = raw_meta
+        elif hasattr(raw_meta, "to_dict"):
+            meta = raw_meta.to_dict()
+        else:
+            meta = {}
+            try:
+                for key in raw_meta.keys():
+                    meta[str(key)] = raw_meta[key]
+            except Exception:
+                meta = {}
+
         return {
             "status": "success",
             "payment_status": s.payment_status,

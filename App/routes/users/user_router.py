@@ -3,27 +3,19 @@ import json
 import os
 import uuid
 from pathlib import Path
-from PIL import Image
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, status
+from fastapi import (APIRouter, Body, Depends, File, HTTPException, UploadFile,
+                     status)
 from jose import jwt
+from PIL import Image
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from App.Database.db import (
-    Booking,
-    Classes,
-    Subscriptions,
-    UserProfile,
-    Users,
-    get_async_session,
-)
-from App.routes.users.helper import (
-    generate_password_hash,
-    get_current_user,
-    validate_password,
-)
+from App.Database.db import (Booking, Classes, Subscriptions, UserProfile,
+                             Users, get_async_session)
+from App.routes.users.helper import (generate_password_hash, get_current_user,
+                                     validate_password)
 from App.routes.users.model import ChangePassword, InformationUser
 
 from ...app import logger, redis_client

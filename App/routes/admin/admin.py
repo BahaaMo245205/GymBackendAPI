@@ -9,13 +9,8 @@ from ...Database.db import Classes, Memberships, Subscriptions
 from ...Database.db import Users as Us
 from ...Database.db import get_async_session
 from .helper import *
-from .models import (
-    ClassCreateSchema,
-    ClassUpdateSchema,
-    MembershipDetails,
-    RoleUpdateSchema,
-    UserStatusUpdate,
-)
+from .models import (ClassCreateSchema, ClassUpdateSchema, MembershipDetails,
+                     RoleUpdateSchema, UserStatusUpdate)
 
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
 
@@ -440,6 +435,7 @@ async def create_new_class(
     session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(ensure_admin_role),
 ):
+    await redis_client.delete("all_classes")
     admin_id = current_user
 
     trainer_query = select(Us).where(Us.UserID == class_data.Trainer_id)
@@ -456,13 +452,13 @@ async def create_new_class(
         )
 
     new_class = Classes(
-        ClassName=class_data.ClassName,
-        TypeClass=class_data.TypeClass,
-        Price=class_data.Price,
-        Date=class_data.Date,
-        Start_time=class_data.Start_time,
-        End_time=class_data.End_time,
-        Trainer_id=class_data.Trainer_id,
+        classname=class_data.ClassName,
+        typeclass=class_data.TypeClass,
+        price=class_data.Price,
+        date=class_data.Date,
+        starttime=class_data.Start_time,
+        endtime=class_data.End_time,
+        trainerid=class_data.Trainer_id,
     )
 
     try:

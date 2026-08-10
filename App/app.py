@@ -128,9 +128,8 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
-from App.routes.admin import admin
-
 # ---------- Routers ----------
+from App.routes.admin import admin
 from App.routes.auth import auth
 from App.routes.classes import classes_router
 from App.routes.membership import route
