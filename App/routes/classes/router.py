@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select,delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -127,7 +127,7 @@ async def cancel_class_booking(
     query = select(Booking).where(
         Booking.UserID == current_user_id,
         Booking.ClassID == class_id,
-        Booking.Is_active == True,
+        Booking.Is_active == False,
     )
     result = await session.execute(query)
     booking = result.scalar_one_or_none()
@@ -140,9 +140,6 @@ async def cancel_class_booking(
 
     try:
         await session.delete(booking)
-
-        # booking.Is_active = False
-
         await session.commit()
 
         logger.info("تم إلغاء الحجز بنجاح")

@@ -142,7 +142,7 @@ async def forgot_password(email: ForgotPasswordSchema):
     try:
 
         token = create_reset_token(email.email)
-        reset_link = f"http://localhost:5501/reset-password.html?token={token}"
+        reset_link = f"http://localhost:5500/reset-password.html?token={token}"
 
         message = MessageSchema(
             subject="Gym System - Reset Your Password",
@@ -289,7 +289,7 @@ async def google_callback(
     logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح: %s", email)
 
     redirect_url = (
-        f"http://localhost:5501/login.html"
+        f"http://localhost:5500/login.html"
         f"?access_token={app_access_token}&refresh_token={app_refresh_token}"
     )
     return RedirectResponse(url=redirect_url)

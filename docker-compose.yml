@@ -1,0 +1,40 @@
+
+services:
+  api:
+    image: gymapi
+    container_name: gym-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - FRONTEND_URL=http://localhost:5501
+      - redis
+    restart: always
+    networks:
+      - gym-net
+
+  redis:
+    image: redis:alpine
+    container_name: gym-redis
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - gym-net
+
+  frontend:
+    image: frontend
+    container_name: gym-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    restart: always
+    networks:
+      - gym-net
+
+networks:
+  gym-net:
+    driver: bridge

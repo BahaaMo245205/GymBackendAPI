@@ -16,7 +16,7 @@ from App.Database.db import (Booking, Classes, Subscriptions, UserProfile,
                              Users, get_async_session)
 from App.routes.users.helper import (generate_password_hash, get_current_user,
                                      validate_password)
-from App.routes.users.model import ChangePassword, InformationUser
+from App.routes.users.models import ChangePassword, InformationUser
 
 from ...app import logger, redis_client
 
@@ -226,7 +226,7 @@ async def get_my_bookings(
     try:
         cached = await redis_client.get(cache_key)
         if cached:
-            logger.info(f"Bookings cache hit | user_id={user_id}")
+            logger.info(f"Bookings cache hit | user_id={user_id} | Info={cached}")
             bookings_data = json.loads(cached)
             return {
                 "status": "success",
@@ -248,7 +248,7 @@ async def get_my_bookings(
                 {
                     "BookingID": getattr(booking, "BookingID", None),
                     "ClassID": booking.ClassID,
-                    "status": getattr(booking, "status", "active"),
+                    "status": booking.Is_active,
                     "ClassName": class_obj.ClassName,
                     "TypeClass": class_obj.TypeClass,
                     "Price": class_obj.Price,
@@ -263,7 +263,7 @@ async def get_my_bookings(
         logger.info(
             f"Bookings loaded from DB | user_id={user_id} | count={len(bookings_data)}"
         )
-
+        logger.info(f"Bookings cache set | user_id={user_id} | Info={bookings_data}")
         return {
             "status": "success",
             "count": len(bookings_data),

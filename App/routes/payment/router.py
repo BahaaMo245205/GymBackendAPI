@@ -11,13 +11,13 @@ from sqlalchemy.future import select
 from ...app import logger
 from ...Database.db import (Booking, Classes, Memberships, Payments,
                             Subscriptions, get_async_session)
-from ...redis_client import redis_client
+from ...redis import redis_client
 from ..users.helper import get_current_user
 
 load_dotenv()
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5501")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
 
 router_payment = APIRouter(prefix="/v1/api/payments", tags=["Payments"])
 
@@ -35,18 +35,23 @@ async def create_checkout_session(
         raise HTTPException(status_code=401, detail="المستخدم غير معروف")
 
     if pay_type not in ("membership", "class"):
-        logger.warning("pay_type غير صالح")
+        logger.warning("pay_type غير صالح: %s", pay_type)
         raise HTTPException(status_code=400, detail="pay_type غير صالح")
 
     duration_days = None
+    name = ""
+    description = ""
+    price = 0
 
     if pay_type == "membership":
+        await redis_client.delete(f"user:subscriptions:{user_id}")
+
         result = await session.execute(
             select(Memberships).where(Memberships.MembershipsID == item_id)
         )
         item = result.scalar_one_or_none()
         if not item:
-            logger.warning("الباقة غير موجودة")
+            logger.warning("الباقة غير موجودة | id=%s", item_id)
             raise HTTPException(status_code=404, detail="الباقة غير موجودة")
 
         active = await session.execute(
@@ -57,7 +62,7 @@ async def create_checkout_session(
             )
         )
         if active.scalars().first():
-            logger.warning("لديك اشتراك ساري بالفعل")
+            logger.warning("اشتراك ساري موجود | user=%s", user_id)
             raise HTTPException(status_code=400, detail="لديك اشتراك ساري بالفعل")
 
         name = f"اشتراك {item.duration_months} شهور"
@@ -65,33 +70,35 @@ async def create_checkout_session(
         price = int(item.Price)
         duration_days = int(item.duration_months) * 30
 
-    else:
+    else: 
+        await redis_client.delete(f"user:bookings:{user_id}")
         result = await session.execute(
             select(Classes).where(Classes.ClassesID == item_id)
         )
         item = result.scalar_one_or_none()
-
         if not item:
-            logger.warning("الكلاس غير موجود")
+            logger.warning("الكلاس غير موجود | id=%s", item_id)
             raise HTTPException(status_code=404, detail="الكلاس غير موجود")
 
-        active = await session.execute(
+        existing = await session.execute(
             select(Booking).where(
                 Booking.UserID == user_id,
-                Booking.Is_active == True,
+                Booking.ClassID == item_id,
+                Booking.Is_active == True,  
             )
         )
-
-        if active.scalars().first():
+        if existing.scalars().first():
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="لديك حجز كلاس من قبل"
+                status_code=400,
+                detail="لديك حجز نشط على هذا الكلاس بالفعل",
             )
+
         name = item.ClassName
         description = f"{item.TypeClass} | {item.Start_time} - {item.End_time}"
         price = int(item.Price)
 
     amount = price * 100
-    frontend = os.getenv("FRONTEND_URL", "http://localhost:5501")
+    frontend = os.getenv("FRONTEND_URL", "http://localhost:5500/Frontend")
 
     try:
         checkout = stripe.checkout.Session.create(
@@ -122,6 +129,8 @@ async def create_checkout_session(
 
     try:
         if pay_type == "membership":
+            await redis_client.delete(f"user:subscriptions:{user_id}")
+
             sub = Subscriptions(
                 userid=user_id,
                 membershipsid=item_id,
@@ -132,15 +141,10 @@ async def create_checkout_session(
             session.add(sub)
             await session.flush()
 
-            payment = Payments(
-                date=datetime.now(),
-                price=price,
-                typepay="Card",
-                subscription_id=sub.SubscriptionsID,
-            )
-            session.add(payment)
+
 
         else:
+            await redis_client.delete(f"user:bookings:{user_id}")
             booking = Booking(
                 userid=user_id,
                 classid=item_id,
@@ -241,6 +245,7 @@ async def stripe_webhook(
 
         try:
             if pay_type == "membership":
+                await redis_client.delete(f"user:subscriptions:{user_id}")
                 result = await db.execute(
                     select(Subscriptions).where(
                         Subscriptions.UserID == user_id,
@@ -248,15 +253,28 @@ async def stripe_webhook(
                         Subscriptions.status == "pending",
                     )
                 )
+                get_price = select(Memberships).where(
+                    Memberships.MembershipsID == item_id
+                )
+                price = await db.execute(get_price)
+                price = price.scalar_one_or_none()
                 sub = result.scalars().first()
                 if sub:
                     sub.status = "active"
+                    payment = Payments(
+                            date=datetime.now(),
+                            price=price.Price,
+                            typepay="Card",
+                            subscription_id=sub.SubscriptionsID,
+                    )
+                    db.add(payment)
                     await db.commit()
                     logger.info(f"Membership activated | user={user_id}")
                 else:
                     logger.warning("Pending subscription not found")
 
             elif pay_type == "class":
+                await redis_client.delete(f"user:bookings:{user_id}")
                 result = await db.execute(
                     select(Booking).where(
                         Booking.UserID == user_id,

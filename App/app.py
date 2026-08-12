@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 from App.Database.db import create_db_and_table
-from App.redis_client import redis_client
+from App.redis import redis_client
 
 from .limiter import custom_rate_limit_handler, limiter
 
@@ -129,16 +129,16 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 # ---------- Routers ----------
-from App.routes.admin import admin
-from App.routes.auth import auth
-from App.routes.classes import classes_router
-from App.routes.membership import route
+from App.routes.admin import router as admin
+from App.routes.auth import router as auth
+from App.routes.classes import router as classes_router
+from App.routes.membership import router as membership_router
 from App.routes.payment import router
-from App.routes.users import user_router
+from App.routes.users import router as user_router
 
 app.include_router(auth.auth_router)
 app.include_router(user_router.router_user)
 app.include_router(admin.router_admin)
-app.include_router(route.router_membership)
+app.include_router(membership_router.router_membership)
 app.include_router(classes_router.classes_router)
 app.include_router(router.router_payment)
