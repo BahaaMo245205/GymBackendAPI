@@ -76,6 +76,7 @@ async def delete_subscription(
         Subscriptions.UserID == current_user.get("ID"),
         Subscriptions.SubscriptionsID == id,
     )
+    logger.info(f"User Id : {current_user.get('ID')} | Subscription Id : {id}")
     result = await session.execute(query)
     subscription = result.scalar_one_or_none()
     if not subscription:

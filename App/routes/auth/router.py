@@ -11,12 +11,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from App.Database.db import Users, get_async_session
-from App.routes.auth.helper import (create_access_token, create_reset_token,
-                                    generate_password_hash, get_current_user,
-                                    retrieve_client_ip, validate_password,
-                                    verify_reset_token)
-from App.routes.auth.models import (ForgotPasswordSchema, LoginSchema,
-                                    RegisterSchema, ResetPasswordSchema)
+from App.routes.auth.helper import (
+    create_access_token,
+    create_reset_token,
+    generate_password_hash,
+    get_current_user,
+    retrieve_client_ip,
+    validate_password,
+    verify_reset_token,
+)
+from App.routes.auth.models import (
+    ForgotPasswordSchema,
+    LoginSchema,
+    RegisterSchema,
+    ResetPasswordSchema,
+)
 
 from ...app import logger
 from ...limiter import limiter
@@ -289,7 +298,7 @@ async def google_callback(
     logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح: %s", email)
 
     redirect_url = (
-        f"http://localhost:5500/login.html"
+        f"http://localhost:5500/Frontend/login.html"
         f"?access_token={app_access_token}&refresh_token={app_refresh_token}"
     )
     return RedirectResponse(url=redirect_url)

@@ -3,19 +3,28 @@ import json
 import os
 import uuid
 from pathlib import Path
+from io import BytesIO
 
 from dotenv import load_dotenv
-from fastapi import (APIRouter, Body, Depends, File, HTTPException, UploadFile,
-                     status)
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, status
 from jose import jwt
 from PIL import Image
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from App.Database.db import (Booking, Classes, Subscriptions, UserProfile,
-                             Users, get_async_session)
-from App.routes.users.helper import (generate_password_hash, get_current_user,
-                                     validate_password)
+from App.Database.db import (
+    Booking,
+    Classes,
+    Subscriptions,
+    UserProfile,
+    Users,
+    get_async_session,
+)
+from App.routes.users.helper import (
+    generate_password_hash,
+    get_current_user,
+    validate_password,
+)
 from App.routes.users.models import ChangePassword, InformationUser
 
 from ...app import logger, redis_client
@@ -178,7 +187,7 @@ async def get_my_subscriptions(
     cashed_key = f"user:subscriptions:{current_user_id.get('ID')}"
     cashed = await redis_client.get(cashed_key)
     if cashed:
-        logger.info("تم تحميل جميع الاشتراكات بنجاح من Redis")
+        logger.info(f"تم تحميل جميع الاشتراكات بنجاح من Redis {cashed}")
         return {
             "status": "success",
             "subscriptions": json.loads(cashed),
@@ -197,6 +206,8 @@ async def get_my_subscriptions(
         )
     all_db_subscriptions = [
         {
+            "SubscriptionID": sub.SubscriptionsID,
+            "UserID": sub.UserID,
             "StartDate": str(sub.StartDate),
             "EndDate": str(sub.EndDate),
             "status": sub.status,
@@ -211,7 +222,7 @@ async def get_my_subscriptions(
     logger.info("تم تحميل جميع الاشتراكات بنجاح")
     return {
         "status": "success",
-        "subscriptions": db_subscriptions,
+        "subscriptions": all_db_subscriptions,
     }
 
 
@@ -349,7 +360,7 @@ async def upload_profile_image(
     current_user: dict = Depends(get_current_user),
     session: AsyncSession = Depends(get_async_session),
 ):
-
+    await redis_client.delete(f"user:profile:{current_user.get('ID')}")
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="الملف المرفوع ليس صورة صالحة.")
 
@@ -359,27 +370,47 @@ async def upload_profile_image(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
         )
 
+    query = select(Users).where(Users.UserID == user_id)
+    result = await session.execute(query)
+    image_user = result.scalar_one_or_none()
+
+    if image_user and image_user.profile_image:
+        old_name = image_user.profile_image
+
+        if not str(old_name).startswith("http"):
+            old_image_path = UPLOAD_DIR / old_name
+            try:
+                if old_image_path.exists() and old_image_path.is_file():
+                    old_image_path.unlink()
+                    logger.info(f"Old profile image deleted: {old_name}")
+            except Exception as e:
+                logger.warning(f"Could not delete old image: {e}")
+
     ext = (file.filename or "img.jpg").rsplit(".", 1)[-1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        logger.warning(f"امتداد الصورة غير مدعوم. {current_user.get('ID')} | {ext}")
+        logger.warning(f"امتداد غير مدعوم | user={user_id} | ext={ext}")
         raise HTTPException(status_code=400, detail="امتداد الصورة غير مدعوم.")
-
-    unique_filename = f"{uuid.uuid4().hex}.{ext}"
-    file_path = UPLOAD_DIR / unique_filename
 
     try:
         content = await file.read()
+
         if len(content) > 5 * 1024 * 1024:
-            logger.warning("حجم الصورة كبير Jacket")
-            await session.rollback()
             raise HTTPException(
                 status_code=400, detail="حجم الصورة كبير جدًا (الحد 5MB)."
             )
 
-        with Image.open(file_path) as buffer:
-            buffer.resize(200, 200)
-            buffer.save(file_path)
-            logger.info("تم حفظ الصورة بنجاح")
+        try:
+            img = Image.open(BytesIO(content))
+            img = img.convert("RGB") if img.mode in ("RGBA", "P") else img
+            img = img.resize((200, 200))
+        except Exception:
+            raise HTTPException(status_code=400, detail="ملف الصورة تالف أو غير صالح.")
+
+        unique_filename = f"{uuid.uuid4().hex}.jpg"
+        file_path = UPLOAD_DIR / unique_filename
+
+        img.save(file_path, format="JPEG", quality=85)
+        logger.info(f"تم حفظ الصورة | {unique_filename}")
 
         await session.execute(
             update(Users)
@@ -387,19 +418,18 @@ async def upload_profile_image(
             .values(profile_image=unique_filename)
         )
         await session.commit()
-        logger.info("تم تحميل الصورة بنجاح")
 
         image_url = f"/static/profiles/{unique_filename}"
-
-        logger.info("تم رفع الصورة بنجاح")
         return {
             "status": "success",
             "message": "تم رفع الصورة بنجاح",
             "image_url": image_url,
             "filename": unique_filename,
         }
+
     except HTTPException:
         await session.rollback()
+        raise
     except Exception as e:
         logger.error(f"Error uploading image: {e}")
         await session.rollback()

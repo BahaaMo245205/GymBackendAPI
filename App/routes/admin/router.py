@@ -9,8 +9,13 @@ from ...Database.db import Classes, Memberships, Subscriptions
 from ...Database.db import Users as Us
 from ...Database.db import get_async_session
 from .helper import *
-from .models import (ClassCreateSchema, ClassUpdateSchema, MembershipDetails,
-                     RoleUpdateSchema, UserStatusUpdate)
+from .models import (
+    ClassCreateSchema,
+    ClassUpdateSchema,
+    MembershipDetails,
+    RoleUpdateSchema,
+    UserStatusUpdate,
+)
 
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
 

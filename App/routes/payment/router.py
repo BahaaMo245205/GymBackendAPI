@@ -9,8 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from ...app import logger
-from ...Database.db import (Booking, Classes, Memberships, Payments,
-                            Subscriptions, get_async_session)
+from ...Database.db import (
+    Booking,
+    Classes,
+    Memberships,
+    Payments,
+    Subscriptions,
+    get_async_session,
+)
 from ...redis import redis_client
 from ..users.helper import get_current_user
 
@@ -70,7 +76,7 @@ async def create_checkout_session(
         price = int(item.Price)
         duration_days = int(item.duration_months) * 30
 
-    else: 
+    else:
         await redis_client.delete(f"user:bookings:{user_id}")
         result = await session.execute(
             select(Classes).where(Classes.ClassesID == item_id)
@@ -84,7 +90,7 @@ async def create_checkout_session(
             select(Booking).where(
                 Booking.UserID == user_id,
                 Booking.ClassID == item_id,
-                Booking.Is_active == True,  
+                Booking.Is_active == True,
             )
         )
         if existing.scalars().first():
@@ -140,8 +146,6 @@ async def create_checkout_session(
             )
             session.add(sub)
             await session.flush()
-
-
 
         else:
             await redis_client.delete(f"user:bookings:{user_id}")
@@ -262,10 +266,10 @@ async def stripe_webhook(
                 if sub:
                     sub.status = "active"
                     payment = Payments(
-                            date=datetime.now(),
-                            price=price.Price,
-                            typepay="Card",
-                            subscription_id=sub.SubscriptionsID,
+                        date=datetime.now(),
+                        price=price.Price,
+                        typepay="Card",
+                        subscription_id=sub.SubscriptionsID,
                     )
                     db.add(payment)
                     await db.commit()

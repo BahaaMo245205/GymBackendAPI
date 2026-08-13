@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select,delete
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -121,36 +121,60 @@ async def book_class(
 @classes_router.delete("/{class_id}/cancel", status_code=status.HTTP_200_OK)
 async def cancel_class_booking(
     class_id: str,
-    current_user_id: str = Depends(get_current_user_id),
+    current_user: dict = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_async_session),
 ):
-    query = select(Booking).where(
-        Booking.UserID == current_user_id,
-        Booking.ClassID == class_id,
-        Booking.Is_active == False,
+    user_id = current_user.get("ID") or current_user.get("UserID")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    logger.info(f"Cancel booking | user={user_id} | class_or_booking={class_id}")
+
+    result = await session.execute(
+        select(Booking).where(
+            Booking.UserID == user_id,
+            Booking.ClassID == class_id,
+            Booking.Is_active == False,
+        )
     )
-    result = await session.execute(query)
     booking = result.scalar_one_or_none()
 
     if not booking:
+        result = await session.execute(
+            select(Booking).where(
+                Booking.UserID == user_id,
+                Booking.BookingID == class_id,
+                Booking.Is_active == False,
+            )
+        )
+        booking = result.scalar_one_or_none()
+
+    if not booking:
+        logger.warning(f"No pending booking found | user={user_id} | id={class_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="عفواً، لا يوجد حجز نشط لك لهذه الحصة لكي تقوم بإلغائه.",
+            detail="عفواً، لا يوجد حجز قيد التفعيل لإلغائه.",
         )
+
+    logger.info(
+        f"Booking found | BookingID={booking.BookingID} | "
+        f"ClassID={booking.ClassID} | Is_active={booking.Is_active}"
+    )
 
     try:
         await session.delete(booking)
         await session.commit()
 
-        logger.info("تم إلغاء الحجز بنجاح")
+        try:
+            await redis_client.delete(f"user:bookings:{user_id}")
+        except Exception:
+            pass
+
         return {
             "status": "success",
-            "message": "تم إلغاء حجز الحصة بنجاح وتحرير مكانك.",
+            "message": "تم إلغاء الحجز بنجاح",
         }
-
     except Exception as e:
         await session.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء إلغاء الحجز: {str(e)}",
-        )
+        logger.error(f"Cancel booking error: {e}")
+        raise HTTPException(status_code=500, detail="تعذر إلغاء الحجز")
