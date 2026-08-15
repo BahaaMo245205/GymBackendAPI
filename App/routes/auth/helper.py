@@ -1,23 +1,21 @@
 import hashlib
-import os
+import os, re
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends, HTTPException, status
-from fastapi.requests import Request
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import HTTPException
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-
-from ...app import logger
+import logging
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-security_scheme = HTTPBearer()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -84,55 +82,3 @@ def create_access_token(data: dict) -> str | None:
     refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return access_token, refresh_token
-
-
-def retrieve_client_ip(request: Request) -> str:
-
-    x_forwarded_for = request.headers.get("X-Forwarded-For")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-
-    x_real_ip = request.headers.get("X-Real-IP")
-    if x_real_ip:
-        x_real_ip.split(",")[0].strip()
-
-    return request.client.host
-
-
-def get_current_user(
-    request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
-) -> dict:
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(
-            token,
-            key=str(SECRET_KEY),
-            algorithms=[str(ALGORITHM)],
-        )
-
-        user_id = payload.get("ID")
-        user_email = payload.get("Email")
-        user_name = payload.get("UserName")
-        ipaddress = payload.get("ip-address")
-        user_role = payload.get("Role")
-
-        if user_email is None and ipaddress != retrieve_client_ip(request):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="توكن غير صالح: البيانات ناقصة أو عنوان الـ IP غير مطبق.",
-            )
-
-        return {
-            "ID": user_id,
-            "Email": user_email,
-            "UserName": user_name,
-            "Role": user_role,
-        }
-
-    except Exception as e:
-        logger.error("هناك مشكله في JWT Token : {}".format(e))
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="التوكن غير صالح أو انتهت صلاحيته.",
-        )

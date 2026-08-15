@@ -26,9 +26,11 @@ from App.routes.users.helper import (
     validate_password,
 )
 from App.routes.users.models import ChangePassword, InformationUser
+from ...core.security import is_password_strong
+from ...redis import redis_client
+import logging
 
-from ...app import logger, redis_client
-
+logger = logging.getLogger(__name__)
 router_user = APIRouter(prefix="/v1/api/user", tags=["User"])
 
 
@@ -155,6 +157,9 @@ async def ChangePasswords(
     if passwords.NewPassword != passwords.ConfirmPassword:
         logger.warning("كلمات المرور غير متطابقة")
         raise HTTPException(status_code=400, detail="كلمات المرور غير متطابقة")
+
+    if not is_password_strong(passwords.NewPassword):
+        logger.warning("كلمة المرور ضعيفة")
 
     result = await session.execute(
         select(Users).where(Users.UserID == current_user.get("ID"))

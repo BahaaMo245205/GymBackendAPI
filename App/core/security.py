@@ -1,14 +1,13 @@
-import os
+import os, re
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
+import logging
 
-from ...app import logger
-from ..auth.helper import get_current_user
-
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -81,5 +80,24 @@ def ensure_admin_role(current_user: dict = Depends(get_current_user)) -> str:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="عفواً.. هذا المسار مخصص للأدمن فقط!",
         )
+
+    return
+
+
+def is_password_strong(password: str) -> bool:
+    if len(password) < 8:
+        return False
+
+    if not re.search(r"[A-Z]", password):
+        return False
+
+    if not re.search(r"[a-z]", password):
+        return False
+
+    if not re.search(r"[0-9]", password):
+        return False
+
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False
 
     return True

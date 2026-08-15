@@ -8,7 +8,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from ...app import logger
 from ...Database.db import (
     Booking,
     Classes,
@@ -19,7 +18,9 @@ from ...Database.db import (
 )
 from ...redis import redis_client
 from ..users.helper import get_current_user
+import logging
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")

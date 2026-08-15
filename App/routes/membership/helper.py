@@ -5,9 +5,9 @@ from fastapi import Depends, HTTPException, status
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
+import logging
 
-from ...app import logger
-
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")

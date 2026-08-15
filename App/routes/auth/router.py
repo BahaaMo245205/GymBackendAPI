@@ -6,17 +6,16 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.requests import Request
 from fastapi.responses import RedirectResponse
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
+from fastapi_mail import ConnectionConfig
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from ...core.security import get_current_user, retrieve_client_ip, is_password_strong
 
 from App.Database.db import Users, get_async_session
 from App.routes.auth.helper import (
     create_access_token,
-    create_reset_token,
     generate_password_hash,
-    get_current_user,
-    retrieve_client_ip,
     validate_password,
     verify_reset_token,
 )
@@ -27,9 +26,14 @@ from App.routes.auth.models import (
     ResetPasswordSchema,
 )
 
-from ...app import logger
+
+from ...Tasks.task import send_forgot_password_email, deliver_welcome_message
+
 from ...limiter import limiter
 
+import logging
+
+logger = logging.getLogger(__name__)
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -129,6 +133,9 @@ async def register(
         email = register.email.strip()
         password = register.password.strip()
 
+        if not is_password_strong(password):
+            raise HTTPException(status_code=400, detail="🚨 كلمة المرور ضعيفة!")
+
         if not username and not email and not password:
             raise HTTPException(status_code=401, detail="Please input all data !")
 
@@ -138,6 +145,7 @@ async def register(
         await session.refresh(add_user)
 
         logger.info("تم تسجيل الحساب بنجاح يا برنس!")
+        deliver_welcome_message.delay(email)
         return {"status": "success", "message": "تم تسجيل الحساب بنجاح يا برنس!"}
 
     except Exception as e:
@@ -147,30 +155,13 @@ async def register(
 
 
 @auth_router.post("/forgot-password")
-async def forgot_password(email: ForgotPasswordSchema):
-    try:
-
-        token = create_reset_token(email.email)
-        reset_link = f"http://localhost:5500/reset-password.html?token={token}"
-
-        message = MessageSchema(
-            subject="Gym System - Reset Your Password",
-            recipients=[email.email],
-            body=f"<a href='{reset_link}'>تغير باسورد </a>",
-            subtype=MessageType.html,
-        )
-
-        fm = FastMail(config=conf)
-        await fm.send_message(message)
-
-        logger.info("إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.")
-        return {
-            "status": "success",
-            "message": "إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.",
-        }
-    except Exception as e:
-        logger.error(f"Error : {e}")
-        raise HTTPException(status_code=500, detail=f"Error : {e}")
+async def forgot_password(body: ForgotPasswordSchema):
+    send_forgot_password_email.delay(body.email)
+    logger.info("إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.")
+    return {
+        "status": "success",
+        "message": "إذا كان البريد الإلكتروني مسجلاً، فستتلقى رابطاً لإعادة التعيين.",
+    }
 
 
 @auth_router.post("/reset-password")

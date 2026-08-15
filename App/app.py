@@ -6,10 +6,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from App.Database.db import create_db_and_table
 from App.redis import redis_client
-
+from .alerts import (
+    expire_subscriptions_job,
+    reminder_before_subscription_ends,
+    clear_redis_cache_job,
+)
 from .limiter import custom_rate_limit_handler, limiter
 
 # ---------- Logging ----------
@@ -21,6 +25,7 @@ logging.basicConfig(
     encoding="utf-8",
 )
 logger = logging.getLogger(__name__)
+scheduler = AsyncIOScheduler()
 
 
 # ---------- Lifespan ----------
@@ -36,10 +41,26 @@ async def lifespan(app: FastAPI):
         logger.info("Redis connected")
     except Exception as e:
         logger.error(f"Redis connection failed: {e}")
+    try:
+
+        scheduler.start()
+        logger.info("Scheduler started")
+        scheduler.add_job(expire_subscriptions_job, "interval", hours=24)
+        scheduler.add_job(
+            reminder_before_subscription_ends, "interval", hours=24, minutes=30
+        )
+        scheduler.add_job(clear_redis_cache_job, "interval", hours=24)
+        logger.info("Jobs added to scheduler")
+        logger.info("Scheduler started")
+    except Exception as e:
+        logger.error(f"Scheduler failed: {e}")
 
     yield
 
     logger.info("Shutting down...")
+    scheduler.shutdown()
+    logger.info("Scheduler shutdown")
+
     try:
         await redis_client.close()
         logger.info("Redis closed")

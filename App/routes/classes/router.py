@@ -6,10 +6,12 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ...app import logger, redis_client
+from ...redis import redis_client
 from ...Database.db import Booking, Classes, get_async_session
 from .helper import get_current_user_id
+import logging
 
+logger = logging.getLogger(__name__)
 classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 
 

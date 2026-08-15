@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...app import logger
 from ...Database.db import Memberships, Subscriptions, get_async_session
 from ...redis import redis_client
 from .helper import get_current_user
+import logging
 
+logger = logging.getLogger(__name__)
 router_membership = APIRouter(prefix="/v1/api/membership", tags=["Membership"])
 
 
@@ -65,7 +66,7 @@ async def get_memberships(session: AsyncSession = Depends(get_async_session)):
     }
 
 
-@router_membership.delete('/subscription/{id}/delete', status_code=status.HTTP_200_OK)
+@router_membership.delete("/subscription/{id}/delete", status_code=status.HTTP_200_OK)
 async def delete_subscription(
     id: str,
     current_user: dict = Depends(get_current_user),
@@ -101,8 +102,6 @@ async def delete_subscription(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error deleting subscription",
         )
-
-
 
 
 # @router_membership.post("/subscription/{id}", status_code=status.HTTP_201_CREATED)

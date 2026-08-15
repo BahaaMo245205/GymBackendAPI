@@ -1,14 +1,15 @@
 import json
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, status, HTTPException
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from ...core.security import ensure_admin_role
+from ...core.security import get_current_user
 
-from ...app import logger, redis_client
+from ...redis import redis_client
 from ...Database.db import Classes, Memberships, Subscriptions
 from ...Database.db import Users as Us
 from ...Database.db import get_async_session
-from .helper import *
 from .models import (
     ClassCreateSchema,
     ClassUpdateSchema,
@@ -17,6 +18,9 @@ from .models import (
     UserStatusUpdate,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
 
 
