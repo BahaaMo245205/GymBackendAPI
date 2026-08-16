@@ -2,6 +2,7 @@ import os
 from urllib.parse import urlencode
 
 import httpx
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.requests import Request
@@ -185,6 +186,11 @@ async def reset_password(
     if not user:
         logger.error("المستخدم غير موجود")
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    
+    if not is_password_strong(data.new_password):
+        logger.error("🚨 كلمة المرور ضعيفة!")
+        raise HTTPException(status_code=400, detail="🚨 كلمة المرور ضعيفة!\nالكلمة المرور يجب ان يحتوي على 8 أحرف على الأقل")
+
 
     user.password = generate_password_hash(data.new_password)
     await session.commit()
@@ -255,6 +261,8 @@ async def google_callback(
 
     result = await session.execute(select(Users).where(Users.email == email))
     db_user = result.scalar_one_or_none()
+    
+
 
     if not db_user:
         random_password = generate_password_hash(os.urandom(16).hex())
@@ -275,6 +283,9 @@ async def google_callback(
             logger.error("خطأ أثناء تسجيل حساب جوجل: %s", e)
             raise HTTPException(status_code=500, detail="خطأ أثناء تسجيل حساب جوجل")
 
+    # else:
+    #     return RedirectResponse(url="http://localhost:5500/Frontend/email-exists.html", status_code=302)
+        
     app_access_token, app_refresh_token = create_access_token(
         {
             "ID": db_user.UserID,

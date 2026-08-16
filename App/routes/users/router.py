@@ -439,3 +439,32 @@ async def upload_profile_image(
         logger.error(f"Error uploading image: {e}")
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Error: {e}")
+
+@router_user.get("/is-active")
+async def is_active(
+    current_user: dict = Depends(get_current_user),
+    session: AsyncSession = Depends(get_async_session),
+):
+    user_id = current_user.get("ID") or current_user.get("UserID")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    result = await session.execute(
+        select(Users).where(Users.UserID == user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="هذا الحساب محظور. تواصل مع الإدارة.",
+        )
+
+    return {
+        "status": "success",
+        "is_active": True,
+        "user_id": user.UserID,
+    }

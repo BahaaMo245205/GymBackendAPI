@@ -59,6 +59,7 @@ async def create_checkout_session(
         item = result.scalar_one_or_none()
         if not item:
             logger.warning("الباقة غير موجودة | id=%s", item_id)
+            await redis_client.delete(f"all_memberships")
             raise HTTPException(status_code=404, detail="الباقة غير موجودة")
 
         active = await session.execute(
@@ -85,6 +86,7 @@ async def create_checkout_session(
         item = result.scalar_one_or_none()
         if not item:
             logger.warning("الكلاس غير موجود | id=%s", item_id)
+            await redis_client.delete(f"all_classes")
             raise HTTPException(status_code=404, detail="الكلاس غير موجود")
 
         existing = await session.execute(

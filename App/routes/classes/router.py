@@ -36,6 +36,7 @@ async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
 
     if not all_classes:
         logger.warning("لا يوجد اي كلاسات متاحة حالياً في الجيم")
+        await redis_client.delete(cash_key)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="عفواً، لا توجد أي حصص تدريبية متاحة حالياً في الجيم.",
@@ -75,6 +76,7 @@ async def book_class(
     target_class = class_result.scalar_one_or_none()
 
     if not target_class:
+        await redis_client.delete(cash_key)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="عفواً، هذه الحصة غير موجودة أو تم إلغاؤها.",
