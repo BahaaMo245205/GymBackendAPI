@@ -532,7 +532,7 @@ async def update_class(
         logger.info(
             f"Class updated successfully | class_id={class_id} | fields={list(update_data.keys())}"
         )
-
+        await redis_client.delete("all_classes")
         return {
             "status": "success",
             "message": "تم تحديث بيانات الحصة بنجاح",

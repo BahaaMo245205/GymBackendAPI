@@ -278,6 +278,7 @@ async def google_callback(
             await session.commit()
             await session.refresh(db_user)
             logger.info("تم إنشاء حساب جوجل جديد: %s", email)
+            deliver_welcome_message.delay(email)
         except Exception as e:
             await session.rollback()
             logger.error("خطأ أثناء تسجيل حساب جوجل: %s", e)

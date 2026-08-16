@@ -457,14 +457,12 @@ async def is_active(
     if not user:
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
-    if not user.is_active:
-        raise HTTPException(
-            status_code=403,
-            detail="هذا الحساب محظور. تواصل مع الإدارة.",
-        )
+    logger.info(f"Email : {user.email} | is_active : {user.is_active}")
+    if not user.is_active :
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="الحساب محظور") or 403
 
     return {
         "status": "success",
-        "is_active": True,
+        "is_active": user.is_active,
         "user_id": user.UserID,
     }
