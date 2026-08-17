@@ -301,7 +301,7 @@ async def google_callback(
     logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح: %s", email)
 
     redirect_url = (
-        f"http://localhost:5500/Frontend/login.html"
+        f"http://localhost:3000/login.html"
         f"?access_token={app_access_token}&refresh_token={app_refresh_token}"
     )
     return RedirectResponse(url=redirect_url)

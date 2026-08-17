@@ -1,15 +1,36 @@
-
 services:
   api:
     image: gymapi
     container_name: gym-api
+    command: uvicorn App.app:app --host 0.0.0.0 --port 8000
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      - REDIS_HOST=redis
-      - FRONTEND_URL=http://localhost:5501
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BACKEND_URL: redis://redis:6379/0
+      FRONTEND_URL: http://localhost:3000
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - gym-net
+
+  celery:
+    image: gymapi
+    container_name: gym-celery
+    command: celery -A App.Tasks.task.app_celery worker --loglevel=info --pool=solo
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BACKEND_URL: redis://redis:6379/0
+    depends_on:
       - redis
     restart: always
     networks:
@@ -25,7 +46,7 @@ services:
       - gym-net
 
   frontend:
-    image: frontend
+    image: frontgym
     container_name: gym-frontend
     ports:
       - "3000:80"

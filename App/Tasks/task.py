@@ -28,8 +28,8 @@ conf = ConnectionConfig(
 
 app_celery = Celery(
     "tasks",
-    broker=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
-    backend=os.getenv("CELERY_BACKEND_URL", "redis://localhost:6379/0"),
+    broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
+    backend=os.getenv("CELERY_BACKEND_URL", "redis://redis:6379/0"),
 )
 
 
@@ -103,7 +103,7 @@ def deliver_welcome_message(user_email: str) -> dict:
 def send_forgot_password_email(user_email: str) -> dict:
     try:
         token = create_reset_token(user_email)
-        frontend = os.getenv("FRONTEND_URL", "http://localhost:5500")
+        frontend = os.getenv("FRONTEND_URL", "http://localhost:3000")
         reset_link = f"{frontend}/reset-password.html?token={token}"
 
         message = MessageSchema(
