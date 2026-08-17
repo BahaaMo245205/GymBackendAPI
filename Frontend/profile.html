@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الملف الشخصي - نظام الجيم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #ffffff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .username {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 8px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        #loader {
+            text-align: center;
+            color: #64748b;
+            margin-top: 120px;
+            font-size: 16px;
+        }
+
+        .main-content {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px 50px;
+        }
+
+        .profile-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .avatar-wrap {
+            text-align: center;
+        }
+
+        .avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #e2e8f0;
+            border: 3px solid #eff6ff;
+            display: block;
+            margin: 0 auto 10px;
+        }
+
+        .profile-info h1 {
+            font-size: 22px;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .profile-info p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .section-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 22px;
+        }
+
+        .section-card h2 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: #334155;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #3b82f6;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f5f9;
+            flex-wrap: wrap;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-item h4 {
+            color: #1e293b;
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .list-item p {
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .list-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-expired {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .empty-msg {
+            color: #94a3b8;
+            font-size: 14px;
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <p id="loader">جاري تحميل الملف الشخصي...</p>
+
+    <header class="navbar" id="navbar" style="display: none;">
+        <a href="index.html" class="logo">⚡ نظام الجيم</a>
+        <nav class="nav-links">
+            <a href="index.html" class="nav-link">الرئيسية</a>
+            <a href="memberships.html" class="nav-link">الاشتراكات</a>
+            <a href="classes.html" class="nav-link">الكلاسات</a>
+            <a href="profile.html" class="nav-link active">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
+        </nav>
+        <div class="user-section">
+            <span class="username" id="nav-username"></span>
+            <button id="logoutBtn" class="logout-btn">تسجيل الخروج</button>
+        </div>
+    </header>
+
+    <main class="main-content" id="content" style="display: none;">
+
+        <div class="profile-card">
+            <div class="avatar-wrap">
+                <img id="userAvatar" class="avatar" src="https://via.placeholder.com/90" alt="avatar">
+                <input type="file" id="imageInput" accept="image/*" style="font-size:12px; max-width:160px;">
+            </div>
+            <div class="profile-info">
+                <h1 id="profileName">—</h1>
+                <p id="profileEmail">—</p>
+                <p id="profileRole">—</p>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h2>تحديث البيانات</h2>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>العمر</label>
+                    <input type="number" id="ageInput" min="10" max="100" placeholder="العمر">
+                </div>
+                <div class="form-group">
+                    <label>الهاتف</label>
+                    <input type="text" id="phoneInput" placeholder="رقم الهاتف">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>العنوان</label>
+                <input type="text" id="addressInput" placeholder="العنوان">
+            </div>
+            <div class="form-group">
+                <label>النوع</label>
+                <select id="genderInput">
+                    <option value="">اختر</option>
+                    <option value="Male">ذكر</option>
+                    <option value="Female">أنثى</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" id="updateProfileBtn">حفظ التعديلات</button>
+        </div>
+
+        <div class="section-card">
+            <h2>تغيير كلمة المرور</h2>
+            <div class="form-group">
+                <label>كلمة المرور الحالية</label>
+                <input type="password" id="currentPassword" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور الجديدة</label>
+                <input type="password" id="newPassword" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>تأكيد كلمة المرور</label>
+                <input type="password" id="confirmPassword" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" id="resetPasswordBtn">تغيير كلمة المرور</button>
+        </div>
+
+        <div class="section-card">
+            <h2>اشتراكاتي</h2>
+            <div id="membershipsList">
+                <p class="empty-msg">جاري التحميل...</p>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h2>حجوزات الكلاسات</h2>
+            <div id="classesList">
+                <p class="empty-msg">جاري التحميل...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+
+        function formatDate(value) {
+            if (!value) return "—";
+            const raw = String(value).trim();
+            const datePart = raw.split("T")[0].split(" ")[0];
+            const d = new Date(datePart);
+            if (!isNaN(d.getTime()) && d.getFullYear() > 1970) {
+                return d.toLocaleDateString("ar-EG");
+            }
+            return datePart || "—";
+        }
+
+        function getErrorMessage(result) {
+            if (!result) return "حدث خطأ";
+            if (typeof result.detail === "string") return result.detail;
+            if (Array.isArray(result.detail)) {
+                return result.detail.map(e => e.msg || JSON.stringify(e)).join("\n");
+            }
+            return result.message || "حدث خطأ";
+        }
+
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                const data = await res.json();
+                if (!res.ok) return null;
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch {
+                return null;
+            }
+        }
+
+        async function checkUserActive(token) {
+            try {
+                let res = await fetch(`${BACKEND_URL}/v1/api/user/is-active`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) return false;
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/user/is-active`, {
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                }
+
+                if (res.status === 403) {
+                    localStorage.clear();
+                    window.location.href = "account-disabled.html";
+                    return false;
+                }
+
+                if (!res.ok) {
+                    localStorage.clear();
+                    window.location.href = "login.html";
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                console.error(err);
+                return false;
+            }
+        }
+
+        async function checkAuth() {
+            let token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return null;
+            }
+            try {
+                let res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) {
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return null;
+                    }
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+
+                const data = await res.json();
+                if (!(res.ok && data.Info)) {
+                    localStorage.clear();
+                    window.location.href = "login.html";
+                    return null;
+                }
+
+                const active = await checkUserActive(token);
+                if (!active) return null;
+
+                return { token, info: data.Info };
+            } catch (err) {
+                console.error(err);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        // ========== Profile ==========
+        async function loadProfile(token) {
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const user = await res.json();
+                if (!res.ok) return;
+
+                document.getElementById("profileName").textContent =
+                    user.UserName || user.username || "—";
+                document.getElementById("profileEmail").textContent =
+                    user.Gmail || user.Email || user.email || "—";
+                document.getElementById("profileRole").textContent =
+                    "الدور: " + (user.Role || user["user-role"] || "User");
+
+                const avatar = document.getElementById("userAvatar");
+                if (user.profile_image) {
+                    avatar.src = user.profile_image.startsWith("http")
+                        ? user.profile_image
+                        : `${BACKEND_URL}/static/profiles/${user.profile_image}`;
+                }
+
+                const p = user.Profile || {};
+                if (p.Age != null) document.getElementById("ageInput").value = p.Age;
+                if (p.Phone) document.getElementById("phoneInput").value = p.Phone;
+                if (p.Address) document.getElementById("addressInput").value = p.Address;
+                if (p.Gender) document.getElementById("genderInput").value = p.Gender;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.getElementById("updateProfileBtn").addEventListener("click", async () => {
+            const token = localStorage.getItem("access_token");
+            const age = Number(document.getElementById("ageInput").value) || 0;
+            const phone = document.getElementById("phoneInput").value.trim();
+            const address = document.getElementById("addressInput").value.trim();
+            const gender = document.getElementById("genderInput").value;
+
+            if (age < 10 || age > 100) {
+                alert("العمر يجب أن يكون بين 10 و 100");
+                return;
+            }
+            if (address.length > 100) {
+                alert("العنوان يجب أن يكون 100 حرف أو أقل");
+                return;
+            }
+            if (phone && (phone.length < 10 || phone.length > 11)) {
+                alert("الهاتف يجب أن يكون بين 10 و 11 رقم");
+                return;
+            }
+            if (gender && gender !== "Male" && gender !== "Female") {
+                alert("اختر النوع بشكل صحيح");
+                return;
+            }
+
+            const body = { Age: age, phone, Address: address, Gender: gender };
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/update`, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    alert("تم تحديث البيانات بنجاح ✓");
+                    loadProfile(token);
+                } else {
+                    alert("فشل التحديث:\n" + getErrorMessage(data));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        });
+
+        document.getElementById("imageInput").addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const token = localStorage.getItem("access_token");
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/upload-profile-image`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` },
+                    body: formData
+                });
+                const result = await res.json().catch(() => ({}));
+
+                if (res.ok) {
+                    alert("تم رفع الصورة بنجاح ✓");
+                    if (result.image_url) {
+                        document.getElementById("userAvatar").src =
+                            result.image_url.startsWith("http")
+                                ? result.image_url
+                                : `${BACKEND_URL}${result.image_url}`;
+                    } else {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            document.getElementById("userAvatar").src = ev.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                } else {
+                    alert("فشل رفع الصورة: " + getErrorMessage(result));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر رفع الصورة");
+            }
+        });
+
+        document.getElementById("resetPasswordBtn").addEventListener("click", async () => {
+            const token = localStorage.getItem("access_token");
+            const currentPassword = document.getElementById("currentPassword").value;
+            const newPassword = document.getElementById("newPassword").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert("املأ كل الحقول");
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                alert("كلمتا المرور غير متطابقتين");
+                return;
+            }
+            if (newPassword.length < 8) {
+                alert("كلمة المرور 8 أحرف على الأقل");
+                return;
+            }
+
+            try {
+                // جرّب المسار الشائع — عدّله لو عندك اسم مختلف
+                let res = await fetch(`${BACKEND_URL}/v1/api/user/me/change-password`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                // fallback لو الباك يستخدم PUT + أسماء تانية
+                if (res.status === 404 || res.status === 405) {
+                    res = await fetch(`${BACKEND_URL}/v1/api/user/me/ChangePassword`, {
+                        method: "PUT",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            OldPassword: currentPassword,
+                            NewPassword: newPassword,
+                            ConfirmPassword: confirmPassword
+                        })
+                    });
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    alert("تم تغيير كلمة المرور بنجاح ✓");
+                    document.getElementById("currentPassword").value = "";
+                    document.getElementById("newPassword").value = "";
+                    document.getElementById("confirmPassword").value = "";
+                } else {
+                    alert("فشل التغيير: " + getErrorMessage(data));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            }
+        });
+
+        // ========== Classes ==========
+        async function loadClasses(token) {
+            const container = document.getElementById("classesList");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/bookings`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const list = data.bookings || [];
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const dateStr = formatDate(item.Date);
+                        const timeStr = (item.Start_time && item.End_time)
+                            ? `${item.Start_time} → ${item.End_time}`
+                            : "";
+                        const title = item.ClassName || item.name || "كلاس";
+                        const type = item.TypeClass || "";
+
+                        const isActive =
+                            item.Is_active === true ||
+                            item.Is_active === 1 ||
+                            item.status === "active" ||
+                            item.status === true;
+
+                        const statusText = isActive ? "مسجل" : "قيد التفعيل";
+                        const badgeClass = isActive ? "badge-active" : "badge-pending";
+                        const bookingId = item.BookingID || item.id || "";
+
+                        const actionBtn = (!isActive && bookingId)
+                            ? `<button type="button" class="btn-danger" onclick="DeleteClasses('${bookingId}')">إلغاء الحجز</button>`
+                            : "";
+
+                        return `
+                            <div class="list-item">
+                                <div>
+                                    <h4>${title}</h4>
+                                    <p>${type}${type && dateStr !== "—" ? " • " : ""}${dateStr}${timeStr ? " • " + timeStr : ""}</p>
+                                </div>
+                                <div class="list-actions">
+                                    <span class="badge ${badgeClass}">${statusText}</span>
+                                    ${actionBtn}
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لم تسجل في أي كلاس بعد</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل الكلاسات</p>`;
+            }
+        }
+
+        async function DeleteClasses(id) {
+            if (!id || !confirm("هل أنت متأكد من إلغاء هذا الحجز؟")) return;
+            const token = localStorage.getItem("access_token");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/classes/${id}/cancel`, {
+                    method: "DELETE",
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    alert("تم إلغاء الحجز بنجاح ✓");
+                    loadClasses(token);
+                } else {
+                    alert("فشل الإلغاء: " + getErrorMessage(data));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر إلغاء الحجز");
+            }
+        }
+
+        // ========== Memberships ==========
+        async function loadMemberships(token) {
+            const container = document.getElementById("membershipsList");
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/me/subscriptions`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const list = data.subscriptions || data.data || [];
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    container.innerHTML = list.map(item => {
+                        const start = formatDate(item.StartDate);
+                        const end = formatDate(item.EndDate);
+                        const status = (item.status || "").toString().toLowerCase();
+                        const isActive = status === "active";
+                        const isPending = status === "pending";
+
+                        let statusText = "منتهي";
+                        let badgeClass = "badge-expired";
+                        if (isActive) {
+                            statusText = "ساري";
+                            badgeClass = "badge-active";
+                        } else if (isPending) {
+                            statusText = "قيد التفعيل";
+                            badgeClass = "badge-pending";
+                        }
+
+                        const subId =
+                            item.SubscriptionsID ||
+                            item.SubscriptionID ||
+                            item.subscription_id ||
+                            item.id ||
+                            "";
+
+                        const actionBtn = (isPending && subId)
+                            ? `<button type="button" class="btn-danger" onclick="DeleteSubscriptions('${subId}')">إلغاء الاشتراك</button>`
+                            : "";
+
+                        const months = item.duration_months || "";
+                        const price = item.Price ?? item.price ?? "";
+
+                        return `
+                            <div class="list-item">
+                                <div>
+                                    <h4>اشتراك ${months} شهور</h4>
+                                    <p>${price} ج.م • ${start} → ${end}</p>
+                                </div>
+                                <div class="list-actions">
+                                    <span class="badge ${badgeClass}">${statusText}</span>
+                                    ${actionBtn}
+                                </div>
+                            </div>
+                        `;
+                    }).join("");
+                } else {
+                    container.innerHTML = `<p class="empty-msg">لا توجد اشتراكات</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="empty-msg">تعذر تحميل الاشتراكات</p>`;
+            }
+        }
+
+        async function DeleteSubscriptions(id) {
+            if (!id || !confirm("هل أنت متأكد من إلغاء هذا الاشتراك؟")) return;
+            const token = localStorage.getItem("access_token");
+            try {
+                const res = await fetch(
+                    `${BACKEND_URL}/v1/api/membership/subscription/${id}/delete`,
+                    {
+                        method: "DELETE",
+                        headers: { "Authorization": `Bearer ${token}` }
+                    }
+                );
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    alert("تم إلغاء الاشتراك بنجاح ✓");
+                    loadMemberships(token);
+                } else {
+                    alert("فشل الإلغاء: " + getErrorMessage(data));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("تعذر إلغاء الاشتراك");
+            }
+        }
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+
+        (async function init() {
+            const auth = await checkAuth();
+            if (!auth) return;
+
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("navbar").style.display = "flex";
+            document.getElementById("content").style.display = "block";
+            document.getElementById("nav-username").textContent =
+                `👤 ${auth.info.UserName || ""}`;
+
+            const role = (auth.info.Role || auth.info["user-role"] || "")
+                .toString().toLowerCase();
+            if (role === "admin") {
+                document.getElementById("adminLink").style.display = "inline-block";
+            }
+
+            await loadProfile(auth.token);
+            loadMemberships(auth.token);
+            loadClasses(auth.token);
+        })();
+    </script>
+</body>
+
+</html>

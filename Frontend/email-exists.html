@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الإيميل مستخدم - نظام الجيم</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            background: #fff;
+            width: 100%;
+            max-width: 420px;
+            padding: 36px 28px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+        .icon {
+            width: 64px; height: 64px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: #fef3c7;
+            color: #d97706;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 700;
+        }
+        h1 { color: #1e293b; font-size: 22px; margin-bottom: 10px; }
+        p { color: #64748b; font-size: 14px; line-height: 1.7; margin-bottom: 22px; }
+        a {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 4px;
+        }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-secondary { background: #e2e8f0; color: #334155; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">!</div>
+        <h1>هذا البريد مستخدم بالفعل</h1>
+        <p>
+            الإيميل اللي أدخلته مسجّل قبل كده في النظام.
+            سجّل الدخول أو استخدم «نسيت كلمة المرور» لو مش فاكر الباسورد.
+        </p>
+        <a class="btn-primary" href="login.html">تسجيل الدخول</a>
+        <a class="btn-secondary" href="forget-password.html">نسيت كلمة المرور</a>
+        <br>
+        <a class="btn-secondary" href="regester.html" style="margin-top:10px;">رجوع للتسجيل</a>
+    </div>
+</body>
+</html>

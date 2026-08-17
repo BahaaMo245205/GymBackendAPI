@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل حساب جديد</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 32px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 15px;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            margin-top: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .register-link {
+            display: block;
+            text-align: center;
+            margin-top: 24px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .register-link:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>إنشاء حساب</h1>
+        <p class="subtitle">أدخل بياناتك للتسجيل</p>
+
+        <div class="form-group">
+            <label for="UserName">اسم المستخدم</label>
+            <input type="text" id="UserName" placeholder="أدخل اسم المستخدم">
+        </div>
+
+        <div class="form-group">
+            <label for="email">البريد الإلكتروني</label>
+            <input type="email" id="email" placeholder="example@email.com">
+        </div>
+
+        <div class="form-group">
+            <label for="password">كلمة المرور</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+
+        <div class="form-group">
+            <label for="confirm-password">تأكيد كلمة المرور</label>
+            <input type="password" id="confirm-password" placeholder="••••••••">
+        </div>
+        <p style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.5;">
+            كلمة المرور: 8 أحرف على الأقل، حرف كبير، حرف صغير، رقم، ورمز خاص (!@#$)
+        </p>
+
+        <button id="click">تسجيل</button>
+        <a href="login.html" class="register-link">لديك حساب بالفعل؟ سجل الدخول</a>
+    </div>
+    <script>
+        const BACKEND_URL = 'http://localhost:8000';
+
+        let Username = document.getElementById("UserName");
+        let email = document.getElementById("email");
+        let password = document.getElementById("password");
+        let ConfirmPassword = document.getElementById("confirm-password");
+        let btnClick = document.getElementById("click");
+
+
+
+        btnClick.addEventListener("click", async () => {
+
+            if (password.value !== ConfirmPassword.value) {
+                alert("كلمات المرور غير متطابقة!");
+                return;
+            }
+            if (password.length < 8) {
+                alert("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+                return;
+            }
+
+            const userData = {
+                username: Username.value,
+                email: email.value,
+                password: password.value
+            };
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/v1/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert("تم التسجيل بنجاح!");
+                    console.log("Success:", result);
+                    window.location.href = "login.html";
+                } else {
+                    let message = "البيانات غير صحيحة";
+
+                    if (typeof result.detail === "string") {
+                        message = result.detail;
+                    } else if (Array.isArray(result.detail)) {
+                        message = result.detail
+                            .map(err => err.msg || JSON.stringify(err))
+                            .join("\n");
+                    } else if (result.detail && typeof result.detail === "object") {
+                        message = result.detail.msg || JSON.stringify(result.detail);
+                    }
+
+                    alert("فشل تسجيل الدخول:\n" + message);
+                }
+
+            } catch (error) {
+                console.error("Error connecting to server:", error);
+                alert("تعذر الاتصال بالسيرفر!");
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاشتراكات - نظام الجيم</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: #ffffff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .username {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            padding: 8px 14px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #dc2626;
+        }
+
+        .main-content {
+            max-width: 1100px;
+            margin: 36px auto;
+            padding: 0 20px 40px;
+        }
+
+        .section-title {
+            color: #1e293b;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .memberships-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 22px;
+        }
+
+        .membership-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .membership-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .membership-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 14px 36px rgba(59, 130, 246, 0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .membership-title {
+            color: #1e293b;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .duration-badge {
+            background: #eff6ff;
+            color: #3b82f6;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .membership-price {
+            color: #3b82f6;
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .membership-price span {
+            font-size: 14px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .membership-desc {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .feature-item .icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        .feature-item.available .icon {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .feature-item.unavailable .icon {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .subscribe-btn {
+            width: 100%;
+            padding: 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: auto;
+            transition: background 0.2s;
+        }
+
+        .subscribe-btn:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        .subscribe-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px dashed #cbd5e1;
+            color: #64748b;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 8px;
+            color: #334155;
+        }
+
+        #loader {
+            text-align: center;
+            color: #64748b;
+            margin-top: 120px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <p id="loader">جاري التحقق من الحساب...</p>
+
+    <header class="navbar" id="navbar" style="display: none;">
+        <a href="index.html" class="logo">⚡ نظام الجيم</a>
+
+        <nav class="nav-links">
+            <a href="index.html" class="nav-link">الرئيسية</a>
+            <a href="memberships.html" class="nav-link active">الاشتراكات</a>
+            <a href="classes.html" class="nav-link">الكلاسات</a>
+            <a href="profile.html" class="nav-link">الملف الشخصي</a>
+            <a href="admin.html" class="nav-link" id="adminLink"
+                style="display: none; background: #fef3c7; color: #d97706;">لوحة التحكم</a>
+        </nav>
+
+        <div class="user-section">
+            <span class="username" id="nav-username"></span>
+            <button id="logoutBtn" class="logout-btn">تسجيل الخروج</button>
+        </div>
+    </header>
+
+    <main class="main-content" id="content" style="display: none;">
+        <h2 class="section-title">باقات الاشتراكات المتاحة</h2>
+        <div class="memberships-grid" id="membershipsContainer"></div>
+    </main>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000";
+
+        function getErrorMessage(result) {
+            if (!result) return "حدث خطأ ما";
+            if (typeof result.detail === "string") return result.detail;
+            if (Array.isArray(result.detail)) {
+                return result.detail.map(e => e.msg || JSON.stringify(e)).join("\n");
+            }
+            if (result.detail && typeof result.detail === "object") {
+                return result.detail.msg || JSON.stringify(result.detail);
+            }
+            return result.message || "حدث خطأ ما";
+        }
+
+        async function refreshAccessToken() {
+            const refreshToken = localStorage.getItem("refresh_token");
+            if (!refreshToken) return null;
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/refresh`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                const data = await res.json();
+                if (!res.ok) return null;
+
+                localStorage.setItem("access_token", data.access_token);
+                return data.access_token;
+            } catch (err) {
+                console.error("Refresh failed:", err);
+                return null;
+            }
+        }
+
+        async function checkAuth() {
+            let token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return null;
+            }
+
+            try {
+                let res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (res.status === 401) {
+                    const newToken = await refreshAccessToken();
+                    if (!newToken) {
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return null;
+                    }
+                    token = newToken;
+                    res = await fetch(`${BACKEND_URL}/v1/api/auth/check`, {
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                }
+
+                const data = await res.json();
+
+                if (res.ok && data.Info) {
+                    document.getElementById("nav-username").textContent = `👤 ${data.Info.UserName}`;
+                    document.getElementById("loader").style.display = "none";
+                    document.getElementById("navbar").style.display = "flex";
+                    document.getElementById("content").style.display = "block";
+
+                    const role = (data.Info.Role || data.Info["user-role"] || "").toString().toLowerCase();
+                    if (role === "admin") {
+                        document.getElementById("adminLink").style.display = "inline-block";
+                    }
+
+                    return token;
+                }
+
+                localStorage.clear();
+                window.location.href = "login.html";
+                return null;
+            } catch (err) {
+                console.error(err);
+                window.location.href = "login.html";
+                return null;
+            }
+        }
+
+        async function startPayment(membershipId, btn) {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                window.location.href = "login.html";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "جاري التحويل للدفع...";
+
+            try {
+                const res = await fetch(
+                    `${BACKEND_URL}/v1/api/payments/create-checkout-session?pay_type=membership&item_id=${membershipId}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "accept": "application/json"
+                        }
+                    }
+                );
+
+                const result = await res.json();
+
+                if (res.ok && result.checkout_url) {
+                    window.location.href = result.checkout_url;
+                    return;
+                }
+
+                alert("فشل بدء الدفع:\n" + getErrorMessage(result));
+            } catch (err) {
+                console.error(err);
+                alert("تعذر الاتصال بالسيرفر");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "اشتراك الآن";
+            }
+        }
+
+        async function fetchMemberships(token) {
+            const container = document.getElementById("membershipsContainer");
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/membership/all`, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+                const result = await res.json();
+                container.innerHTML = "";
+
+                const list = result.data || result.memberships || (Array.isArray(result) ? result : []);
+
+                if (res.ok && Array.isArray(list) && list.length > 0) {
+                    list.forEach(item => {
+                        const hasWalk = item.walk_machine === true || item.walk_machine === "true";
+                        const id = item.MembershipsID || item.id;
+
+                        const card = document.createElement("div");
+                        card.className = "membership-card";
+                        card.innerHTML = `
+                    <div class="card-header">
+                        <h3 class="membership-title">اشتراك جيم</h3>
+                        <span class="duration-badge">${item.duration_months || "—"} شهور</span>
+                    </div>
+                    <div class="membership-price">${item.Price ?? item.price ?? 0} <span>ج.م</span></div>
+                    <p class="membership-desc">${item.description || "استمتع بكافة أجهزة الجيم والدخول الحر طوال فترة الاشتراك."}</p>
+                    <div class="features">
+                        <div class="feature-item ${hasWalk ? "available" : "unavailable"}">
+                            <span class="icon">${hasWalk ? "✓" : "✕"}</span>
+                            <span>جهاز المشي ${hasWalk ? "متاح" : "غير متاح"}</span>
+                        </div>
+                        <div class="feature-item available">
+                            <span class="icon">✓</span>
+                            <span>دخول حر طوال المدة</span>
+                        </div>
+                    </div>
+                    <button class="subscribe-btn" data-id="${id}">اشتراك الآن</button>
+                `;
+                        container.appendChild(card);
+                    });
+
+                    container.querySelectorAll(".subscribe-btn").forEach(btn => {
+                        btn.addEventListener("click", () => {
+                            const membershipId = btn.dataset.id;
+                            if (!membershipId) {
+                                alert("معرف الباقة غير موجود");
+                                return;
+                            }
+                            startPayment(membershipId, btn);
+                        });
+                    });
+                } else {
+                    container.innerHTML = `
+                <div class="empty-state">
+                    <h3>لا توجد اشتراكات حالياً</h3>
+                    <p>يرجى المحاولة لاحقاً</p>
+                </div>
+            `;
+                }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `
+            <div class="empty-state">
+                <h3>حدث خطأ أثناء تحميل الاشتراكات</h3>
+                <p>تحقق من الاتصال بالسيرفر</p>
+            </div>
+        `;
+            }
+        }
+        async function checkUserActive(token) {
+            try {
+                const res = await fetch(`${BACKEND_URL}/v1/api/user/is-active`, {
+                    headers: { "Authorization": `Bearer ${token}` }
+                });
+
+                if (res.status === 401) { // Unauthorized (Token expired)
+                    console.log("Access token expired, trying to refresh...");
+                    const newAccessToken = await refreshAccessToken();
+                    if (!newAccessToken) { // Refresh failed
+                        localStorage.clear();
+                        window.location.href = "login.html";
+                        return false;
+                    }
+                    return await checkUserActive(newAccessToken); // Retry with new token
+                }
+
+                if (!res.ok) { // Other errors (e.g., 403 Forbidden/Banned)
+                    const data = await res.json();
+                    alert(data.detail || "حدث خطأ أو أن الحساب محظور.");
+                    localStorage.clear();
+                    window.location.href = "login.html";
+                    return false;
+                }
+                return true; // User is active
+            } catch (err) {
+                console.error("Failed to check user status:", err);
+                alert("لا يمكن الاتصال بالخادم للتحقق من حالة الحساب.");
+                return false; // Indicate failure
+            }
+        }
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.clear();
+            window.location.href = "login.html";
+        });
+
+        (async () => {
+            const token = await checkAuth();
+            if (token) { fetchMemberships(token) 
+                const isActive = await checkUserActive(token);
+                if (!isActive) return;
+            };
+        })();
+    </script>
+</body>
+
+</html>
