@@ -1,13 +1,13 @@
 import hashlib
-import os, re
-from datetime import datetime, timedelta, timezone
+import logging
+import os
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import logging
 
 load_dotenv()
 
@@ -74,11 +74,11 @@ def create_access_token(data: dict) -> str | None:
         return None
 
     access_payload = data.copy()
-    access_payload.update({"exp": datetime.utcnow() + timedelta(minutes=15)})
+    access_payload.update({"exp": datetime.now(timezone.utc) + timedelta(minutes=15)})
     access_token = jwt.encode(access_payload, SECRET_KEY, algorithm=ALGORITHM)
 
     refresh_payload = data.copy()
-    refresh_payload.update({"exp": datetime.utcnow() + timedelta(days=7)})
+    refresh_payload.update({"exp": datetime.now(timezone.utc) + timedelta(days=7)})
     refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return access_token, refresh_token

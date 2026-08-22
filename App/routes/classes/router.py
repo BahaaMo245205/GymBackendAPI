@@ -1,22 +1,24 @@
 import json
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from ...redis import redis_client
+from ...core.security import get_current_user
 from ...Database.db import Booking, Classes, get_async_session
-from .helper import get_current_user_id
-import logging
+from ...redis import redis_client
 
 logger = logging.getLogger(__name__)
 classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
 
 @classes_router.get("/", status_code=status.HTTP_200_OK)
-async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
+async def get_all_classes(session: AsyncSession = DbSession):
     cash_key = "all_classes"
     cash = await redis_client.get(cash_key)
     if cash:
@@ -63,8 +65,8 @@ async def get_all_classes(session: AsyncSession = Depends(get_async_session)):
 @classes_router.post("/{class_id}/booking", status_code=status.HTTP_201_CREATED)
 async def book_class(
     class_id: str,
-    current_user_id: dict = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_async_session),
+    current_user_id: dict = CurrentUser,
+    session: AsyncSession = DbSession,
 ):
     cash_key = "user:bookings:" + current_user_id.get("ID")
     await redis_client.delete(cash_key)
@@ -115,18 +117,18 @@ async def book_class(
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"حدث خطأ أثناء إتمام الحجز: {str(e)}")
+        logger.error(f"حدث خطأ أثناء إتمام الحجز: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء إتمام الحجز: {str(e)}",
+            detail=f"حدث خطأ أثناء إتمام الحجز: {e!s}",
         )
 
 
 @classes_router.delete("/{class_id}/cancel", status_code=status.HTTP_200_OK)
 async def cancel_class_booking(
     class_id: str,
-    current_user: dict = Depends(get_current_user_id),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession = DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     if not user_id:

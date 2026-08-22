@@ -1,8 +1,8 @@
+import logging
 import os
 from urllib.parse import urlencode
 
 import httpx
-from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.requests import Request
@@ -10,8 +10,6 @@ from fastapi.responses import RedirectResponse
 from fastapi_mail import ConnectionConfig
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from ...core.security import get_current_user, retrieve_client_ip, is_password_strong
 
 from App.Database.db import Users, get_async_session
 from App.routes.auth.helper import (
@@ -27,12 +25,9 @@ from App.routes.auth.models import (
     ResetPasswordSchema,
 )
 
-
-from ...Tasks.task import send_forgot_password_email, deliver_welcome_message
-
+from ...core.security import get_current_user, is_password_strong, retrieve_client_ip
 from ...limiter import limiter
-
-import logging
+from ...Tasks.task import deliver_welcome_message, send_forgot_password_email
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -52,13 +47,16 @@ conf = ConnectionConfig(
     USE_CREDENTIALS=True,
 )
 
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
+
 
 @auth_router.post("/login", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def login(
     login_user: LoginSchema,
     request: Request,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
     """تسجيل الدخول والتحقق من الهوية"""
 
@@ -117,7 +115,7 @@ async def login(
 async def register(
     request: Request,
     register: RegisterSchema,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
     """تسجيل مستخدم جديد"""
 
@@ -169,7 +167,7 @@ async def forgot_password(body: ForgotPasswordSchema):
 async def reset_password(
     token: str = Query(..., alias="token"),
     data: ResetPasswordSchema = None,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
 
     email = verify_reset_token(token)
@@ -186,11 +184,13 @@ async def reset_password(
     if not user:
         logger.error("المستخدم غير موجود")
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
-    
+
     if not is_password_strong(data.new_password):
         logger.error("🚨 كلمة المرور ضعيفة!")
-        raise HTTPException(status_code=400, detail="🚨 كلمة المرور ضعيفة!\nالكلمة المرور يجب ان يحتوي على 8 أحرف على الأقل")
-
+        raise HTTPException(
+            status_code=400,
+            detail="🚨 كلمة المرور ضعيفة!\nالكلمة المرور يجب ان يحتوي على 8 أحرف على الأقل",
+        )
 
     user.password = generate_password_hash(data.new_password)
     await session.commit()
@@ -219,7 +219,7 @@ async def login_Google():
 async def google_callback(
     code: str,
     request: Request,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
     if not code:
         raise HTTPException(status_code=400, detail="Authorization Code مفقود")
@@ -261,8 +261,6 @@ async def google_callback(
 
     result = await session.execute(select(Users).where(Users.email == email))
     db_user = result.scalar_one_or_none()
-    
-
 
     if not db_user:
         random_password = generate_password_hash(os.urandom(16).hex())
@@ -286,7 +284,7 @@ async def google_callback(
 
     # else:
     #     return RedirectResponse(url="http://localhost:5500/Frontend/email-exists.html", status_code=302)
-        
+
     app_access_token, app_refresh_token = create_access_token(
         {
             "ID": db_user.UserID,
@@ -308,7 +306,7 @@ async def google_callback(
 
 
 @auth_router.get("/check", status_code=status.HTTP_200_OK)
-async def read_users_me(current_user: dict = Depends(get_current_user)):
+async def read_users_me(current_user: dict =CurrentUser):
     return {
         "Info": current_user,
         "message": "Welcome to your profile!",

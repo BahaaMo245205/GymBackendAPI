@@ -1,9 +1,10 @@
+import logging
 import os
 from datetime import datetime, timedelta
 
 import stripe
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -18,7 +19,6 @@ from ...Database.db import (
 )
 from ...redis import redis_client
 from ..users.helper import get_current_user
-import logging
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -28,13 +28,15 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 router_payment = APIRouter(prefix="/v1/api/payments", tags=["Payments"])
 
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
 
 @router_payment.post("/create-checkout-session")
 async def create_checkout_session(
     pay_type: str,  # "membership" | "class"
     item_id: str,
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict =CurrentUser,
+    session: AsyncSession = DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     if not user_id:
@@ -59,7 +61,7 @@ async def create_checkout_session(
         item = result.scalar_one_or_none()
         if not item:
             logger.warning("الباقة غير موجودة | id=%s", item_id)
-            await redis_client.delete(f"all_memberships")
+            await redis_client.delete("all_memberships")
             raise HTTPException(status_code=404, detail="الباقة غير موجودة")
 
         active = await session.execute(
@@ -86,7 +88,7 @@ async def create_checkout_session(
         item = result.scalar_one_or_none()
         if not item:
             logger.warning("الكلاس غير موجود | id=%s", item_id)
-            await redis_client.delete(f"all_classes")
+            await redis_client.delete("all_classes")
             raise HTTPException(status_code=404, detail="الكلاس غير موجود")
 
         existing = await session.execute(
@@ -187,7 +189,7 @@ async def create_checkout_session(
 @router_payment.post("/webhook")
 async def stripe_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_async_session),
+    db: AsyncSession = DbSession,
 ):
     payload = await request.body()
     logger.info(f"Webhook payload: {payload}")
@@ -314,7 +316,7 @@ async def stripe_webhook(
 @router_payment.get("/session/{session_id}")
 async def get_session_status(
     session_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict =CurrentUser,
 ):
     try:
         s = stripe.checkout.Session.retrieve(session_id)

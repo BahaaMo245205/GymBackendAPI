@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -27,14 +26,14 @@ class ClassCreateSchema(BaseModel):
 
 
 class ClassUpdateSchema(BaseModel):
-    ClassName: Optional[str] = None
-    TypeClass: Optional[str] = None
-    Price: Optional[int] = Field(None, gt=0)
-    Date: Optional[datetime] = None
-    Start_time: Optional[str] = None
-    End_time: Optional[str] = None
-    Trainer_id: Optional[str] = None
-    Is_active: Optional[bool] = None
+    ClassName: str | None = None
+    TypeClass: str | None = None
+    Price: int | None = Field(None, gt=0)
+    Date: datetime | None = None
+    Start_time: str | None = None
+    End_time: str | None = None
+    Trainer_id: str | None = None
+    Is_active: bool | None = None
 
 
 class RoleUpdateSchema(BaseModel):

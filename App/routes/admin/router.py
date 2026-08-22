@@ -1,15 +1,14 @@
 import json
+import logging
 
-from fastapi import APIRouter, Depends, Path, status, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ...core.security import ensure_admin_role
-from ...core.security import get_current_user
 
-from ...redis import redis_client
-from ...Database.db import Classes, Memberships, Subscriptions
+from ...core.security import ensure_admin_role, get_current_user
+from ...Database.db import Classes, Memberships, Subscriptions, get_async_session
 from ...Database.db import Users as Us
-from ...Database.db import get_async_session
+from ...redis import redis_client
 from .models import (
     ClassCreateSchema,
     ClassUpdateSchema,
@@ -18,17 +17,19 @@ from .models import (
     UserStatusUpdate,
 )
 
-import logging
-
 logger = logging.getLogger(__name__)
 router_admin = APIRouter(prefix="/v1/api/admin", tags=["Admins"])
+
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
+check_admin_permissions = Depends(ensure_admin_role)
 
 
 @router_admin.get("/users", status_code=status.HTTP_200_OK)
 async def get_all_users(
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(get_current_user),
-    chick_role: str = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = CurrentUser,
+    chick_role: str = check_admin_permissions,
 ):
     admin_id = current_user.get("ID") or current_user.get("UserID")
     cache_key = "all_system_users"
@@ -81,17 +82,17 @@ async def get_all_users(
         }
 
     except Exception as e:
-        logger.error(f"Failed to fetch users | admin={admin_id} | error={str(e)}")
+        logger.error(f"Failed to fetch users | admin={admin_id} | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء جلب المستخدمين: {str(e)}",
+            detail=f"حدث خطأ أثناء جلب المستخدمين: {e!s}",
         )
 
 
 @router_admin.post("/memberships", status_code=status.HTTP_201_CREATED)
 async def membership_management(
     membership_details: MembershipDetails,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
 
     add_membership = Memberships(
@@ -118,7 +119,7 @@ async def membership_management(
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"حدث خطأ أثناء إضافة الباقة: {str(e)}")
+        logger.error(f"حدث خطأ أثناء إضافة الباقة: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="حدث خطأ أثناء حفظ الباقة في قاعدة البيانات",
@@ -129,7 +130,7 @@ async def membership_management(
 async def update_membership(
     membership_id: str = Path(..., title="ID الخاص بالباقة"),
     update_data: MembershipDetails = None,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
 ):
     query = select(Memberships).where(Memberships.MembershipsID == membership_id)
     result = await session.execute(query)
@@ -155,7 +156,7 @@ async def update_membership(
             "data": db_membership,
         }
     except Exception as e:
-        logger.error(f"حدث خطأ أثناء تحديث الباقة: {str(e)}")
+        logger.error(f"حدث خطأ أثناء تحديث الباقة: {e!s}")
         await session.rollback()
         raise HTTPException(status_code=500, detail="مشكلة في تحديث البيانات")
 
@@ -163,8 +164,8 @@ async def update_membership(
 @router_admin.delete("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
 async def delete_membership(
     membership_id: str,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = CurrentUser,
 ):
     query = select(Memberships).where(Memberships.MembershipsID == membership_id)
     result = await session.execute(query)
@@ -192,7 +193,6 @@ async def delete_membership(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"لا يمكن حذف الباقة لأنها مرتبطة بـ {subs_count} اشتراك. أوقف الباقة بدل الحذف.",
         )
-
     try:
         await session.delete(db_membership)
         await session.commit()
@@ -207,7 +207,7 @@ async def delete_membership(
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"Delete membership error | id={membership_id} | error={str(e)}")
+        logger.error(f"Delete membership error | id={membership_id} | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="حدث خطأ أثناء محاولة الحذف",
@@ -218,9 +218,9 @@ async def delete_membership(
 async def change_user_role(
     UserID: str,
     role_data: RoleUpdateSchema,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(get_current_user),
-    check_role: dict = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = CurrentUser,
+    check_role: dict = check_admin_permissions,
 ):
     admin_id = current_user.get("ID") or current_user.get("UserID")
 
@@ -269,16 +269,16 @@ async def change_user_role(
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"حدث خطأ أثناء تحديث الصلاحية: {str(e)}")
+        logger.error(f"حدث خطأ أثناء تحديث الصلاحية: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء تحديث الصلاحية في قاعدة البيانات: {str(e)}",
+            detail=f"حدث خطأ أثناء تحديث الصلاحية في قاعدة البيانات: {e!s}",
         )
 
 
 @router_admin.post("/Role", status_code=status.HTTP_200_OK)
 async def get_admin_role_info(
-    current_user: dict = Depends(ensure_admin_role),
+    current_user: dict = check_admin_permissions,
 ):
     """
     التحقق من أن المستخدم الحالي أدمن وإرجاع بياناته الأساسية.
@@ -302,11 +302,11 @@ async def get_admin_role_info(
 
 @router_admin.get("/Reports", status_code=status.HTTP_200_OK)
 async def get_system_reports(
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = check_admin_permissions,
 ):
     try:
-        logger.info(f" requested system reports")
+        logger.info(" requested system reports")
 
         users_result = await session.execute(select(func.count(Us.UserID)))
         total_users = users_result.scalar() or 0
@@ -371,10 +371,10 @@ async def get_system_reports(
         }
 
     except Exception as e:
-        logger.error(f"Failed to generate reports  | error={str(e)}")
+        logger.error(f"Failed to generate reports  | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء استخراج التقارير: {str(e)}",
+            detail=f"حدث خطأ أثناء استخراج التقارير: {e!s}",
         )
 
 
@@ -382,9 +382,9 @@ async def get_system_reports(
 async def update_user_status(
     user_id: str,
     status_update: UserStatusUpdate,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(get_current_user),
-    check_role: dict = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = CurrentUser,
+    check_role: dict = check_admin_permissions,
 ):
     admin_id = current_user.get("ID") or current_user.get("UserID")
 
@@ -430,7 +430,7 @@ async def update_user_status(
         await session.rollback()
         logger.error(
             f"Failed to update user status | admin={admin_id} | "
-            f"user={user_id} | error={str(e)}"
+            f"user={user_id} | error={e!s}"
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -441,8 +441,8 @@ async def update_user_status(
 @router_admin.post("/classes", status_code=status.HTTP_201_CREATED)
 async def create_new_class(
     class_data: ClassCreateSchema,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: dict = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    current_user: dict = check_admin_permissions,
 ):
     await redis_client.delete("all_classes")
     admin_id = current_user
@@ -488,10 +488,10 @@ async def create_new_class(
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"Failed to create class | admin={admin_id} | error={str(e)}")
+        logger.error(f"Failed to create class | admin={admin_id} | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"حدث خطأ أثناء حفظ الحصة: {str(e)}",
+            detail=f"حدث خطأ أثناء حفظ الحصة: {e!s}",
         )
 
 
@@ -499,7 +499,7 @@ async def create_new_class(
 async def update_class(
     class_id: str,
     class_data: ClassUpdateSchema,
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession = DbSession,
     admin_role: str = Depends(ensure_admin_role),
 ):
     query = select(Classes).where(Classes.ClassesID == class_id)
@@ -540,7 +540,7 @@ async def update_class(
         }
     except Exception as e:
         await session.rollback()
-        logger.error(f"Update class error | class_id={class_id} | error={str(e)}")
+        logger.error(f"Update class error | class_id={class_id} | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="حدث خطأ أثناء تحديث الحصة في قاعدة البيانات",
@@ -550,8 +550,8 @@ async def update_class(
 @router_admin.delete("/classes/{class_id}", status_code=status.HTTP_200_OK)
 async def delete_class(
     class_id: str,
-    session: AsyncSession = Depends(get_async_session),
-    admin_role: str = Depends(ensure_admin_role),
+    session: AsyncSession = DbSession,
+    admin_role: str = check_admin_permissions,
 ):
     await redis_client.delete("all_classes")
     await redis_client.delete("all_trainers")
@@ -574,7 +574,7 @@ async def delete_class(
         return {"status": "success", "message": "تم حذف الحصة نهائياً من السيستم"}
     except Exception as e:
         await session.rollback()
-        logger.error(f"Delete class error | class_id={class_id} | error={str(e)}")
+        logger.error(f"Delete class error | class_id={class_id} | error={e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="تعذر حذف الحصة، قد تكون مرتبطة بحجوزات قائمة للمشتركين",
@@ -582,7 +582,7 @@ async def delete_class(
 
 
 @router_admin.post("/Check_Role", status_code=status.HTTP_200_OK)
-async def check_role(role: str = Depends(ensure_admin_role)):
+async def check_role(role: str = check_admin_permissions):
     logger.info(f"Admin role check success | role={role}")
     return {
         "status": "success",
@@ -592,7 +592,7 @@ async def check_role(role: str = Depends(ensure_admin_role)):
 
 
 @router_admin.get("/GetAll/Trainers", status_code=status.HTTP_200_OK)
-async def get_all_trainers(session: AsyncSession = Depends(get_async_session)):
+async def get_all_trainers(session: AsyncSession = DbSession):
     try:
         cash = await redis_client.get("all_trainers")
         if cash:

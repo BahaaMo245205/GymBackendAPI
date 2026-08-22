@@ -1,12 +1,14 @@
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
-from ..routes.auth.helper import create_reset_token
-from dotenv import load_dotenv
-from celery import Celery
-import os
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
+import os
+from datetime import UTC, datetime, timedelta
+
+from celery import Celery
+from dotenv import load_dotenv
+from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jose import jwt
+
+from ..routes.auth.helper import create_reset_token
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
@@ -35,7 +37,7 @@ app_celery = Celery(
 
 def create_reset_token(gmail: str | dict) -> str:
     """This functions for forgetting passwords"""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    expire = datetime.now(UTC) + timedelta(minutes=10)
     to_encode = {"exp": expire, "sub": gmail, "action": "reset_password"}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 

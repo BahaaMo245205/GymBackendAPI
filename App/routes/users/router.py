@@ -1,9 +1,10 @@
 import datetime
 import json
+import logging
 import os
 import uuid
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile, status
@@ -26,9 +27,9 @@ from App.routes.users.helper import (
     validate_password,
 )
 from App.routes.users.models import ChangePassword, InformationUser
+
 from ...core.security import is_password_strong
 from ...redis import redis_client
-import logging
 
 logger = logging.getLogger(__name__)
 router_user = APIRouter(prefix="/v1/api/user", tags=["User"])
@@ -46,11 +47,14 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
+
 
 @router_user.get("/me")
 async def ProfileUser(
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession =DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     cache_key = f"user:profile:{user_id}"
@@ -112,8 +116,8 @@ async def ProfileUser(
 @router_user.put("/me/update")
 async def UpdateProfile(
     user_data: InformationUser,
-    IdUser: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    IdUser: dict = CurrentUser,
+    session: AsyncSession =DbSession,
 ):
     await redis_client.delete(f"user:profile:{IdUser.get("ID")}")
     result = await session.execute(
@@ -151,8 +155,8 @@ async def UpdateProfile(
 @router_user.put("/me/ChangePassword")
 async def ChangePasswords(
     passwords: ChangePassword,
-    current_user: dict | str = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict | str = CurrentUser,
+    session: AsyncSession =DbSession,
 ):
     if passwords.NewPassword != passwords.ConfirmPassword:
         logger.warning("كلمات المرور غير متطابقة")
@@ -186,8 +190,8 @@ async def ChangePasswords(
 
 @router_user.get("/me/subscriptions", status_code=status.HTTP_200_OK)
 async def get_my_subscriptions(
-    session: AsyncSession = Depends(get_async_session),
-    current_user_id: dict = Depends(get_current_user),
+    session: AsyncSession =DbSession,
+    current_user_id: dict = CurrentUser,
 ):
     cashed_key = f"user:subscriptions:{current_user_id.get('ID')}"
     cashed = await redis_client.get(cashed_key)
@@ -233,8 +237,8 @@ async def get_my_subscriptions(
 
 @router_user.get("/me/bookings", status_code=status.HTTP_200_OK)
 async def get_my_bookings(
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession =DbSession,
 ):
 
     user_id = current_user.get("ID") or current_user.get("UserID")
@@ -297,7 +301,7 @@ async def get_my_bookings(
 @router_user.post("/refresh")
 async def refresh_session(
     refresh_token: str = Body(..., embed=True),
-    session: AsyncSession = Depends(get_async_session),
+    session: AsyncSession =DbSession,
 ):
     try:
         payload = jwt.decode(
@@ -362,8 +366,8 @@ async def refresh_session(
 @router_user.post("/upload-profile-image")
 async def upload_profile_image(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession = DbSession,
 ):
     await redis_client.delete(f"user:profile:{current_user.get('ID')}")
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -440,26 +444,27 @@ async def upload_profile_image(
         await session.rollback()
         raise HTTPException(status_code=500, detail=f"Error: {e}")
 
+
 @router_user.get("/is-active")
 async def is_active(
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession =DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    result = await session.execute(
-        select(Users).where(Users.UserID == user_id)
-    )
+    result = await session.execute(select(Users).where(Users.UserID == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
     logger.info(f"Email : {user.email} | is_active : {user.is_active}")
-    if not user.is_active :
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail="الحساب محظور") or 403
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="الحساب محظور"
+        ) or 403
 
     return {
         "status": "success",

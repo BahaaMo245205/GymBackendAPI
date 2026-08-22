@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -5,7 +6,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-import logging
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -60,7 +60,7 @@ def get_current_user(
             "Role": user_role,
         }
 
-    except Exception as e:
+    except Exception:
         logger.error("التوكن غير صالح أو انتهت صلاحيته.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

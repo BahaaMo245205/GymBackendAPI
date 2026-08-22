@@ -2,17 +2,19 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 from App.Database.db import create_db_and_table
 from App.redis import redis_client
+
 from .alerts import (
+    clear_redis_cache_job,
     expire_subscriptions_job,
     reminder_before_subscription_ends,
-    clear_redis_cache_job,
 )
 from .limiter import custom_rate_limit_handler, limiter
 

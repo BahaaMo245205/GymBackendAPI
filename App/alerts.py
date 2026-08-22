@@ -4,10 +4,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from App.Database.db import async_session_maker
-from App.Database.db import Subscriptions, Users
-from App.Tasks.task import sent_email
+from App.Database.db import Subscriptions, Users, async_session_maker
 from App.redis import redis_client
+from App.Tasks.task import sent_email
 
 logger = logging.getLogger(__name__)
 

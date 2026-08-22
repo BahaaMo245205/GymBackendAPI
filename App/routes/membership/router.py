@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -8,14 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...Database.db import Memberships, Subscriptions, get_async_session
 from ...redis import redis_client
 from .helper import get_current_user
-import logging
 
 logger = logging.getLogger(__name__)
 router_membership = APIRouter(prefix="/v1/api/membership", tags=["Membership"])
 
+DbSession = Depends(get_async_session)
+CurrentUser = Depends(get_current_user)
 
 @router_membership.get("/all", status_code=status.HTTP_200_OK)
-async def get_memberships(session: AsyncSession = Depends(get_async_session)):
+async def get_memberships(session: AsyncSession = DbSession):
     cashed_key = "all_memberships"
 
     try:
@@ -69,8 +70,8 @@ async def get_memberships(session: AsyncSession = Depends(get_async_session)):
 @router_membership.delete("/subscription/{id}/delete", status_code=status.HTTP_200_OK)
 async def delete_subscription(
     id: str,
-    current_user: dict = Depends(get_current_user),
-    session: AsyncSession = Depends(get_async_session),
+    current_user: dict = CurrentUser,
+    session: AsyncSession = DbSession,
 ):
     await redis_client.delete(f"user:subscriptions:{current_user.get('ID')}")
     query = select(Subscriptions).where(
@@ -108,7 +109,7 @@ async def delete_subscription(
 # async def create_subscription(
 #     id: str,
 #     session: AsyncSession = Depends(get_async_session),
-#     current_user: dict = Depends(get_current_user),
+#     current_user: dict = CurrentUser,
 # ):
 #     user_id = current_user.get("ID") or current_user.get("UserID")
 #     if not user_id:

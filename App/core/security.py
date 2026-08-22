@@ -1,11 +1,12 @@
-import os, re
+import logging
+import os
+import re
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-import logging
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -16,11 +17,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 ADMINID = os.getenv("ADMINID")
 
 security_scheme = HTTPBearer()
+HttpSecurity = Depends(security_scheme)
 
 
 def get_current_user(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    credentials: HTTPAuthorizationCredentials = HttpSecurity,
 ) -> dict:
     token = credentials.credentials
     try:
@@ -51,7 +53,7 @@ def get_current_user(
         }
 
     except Exception as e:
-        logger.error("{}".format(e))
+        logger.error(f"{e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="التوكن غير صالح أو انتهت صلاحيته.",
@@ -70,12 +72,15 @@ def retrieve_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def ensure_admin_role(current_user: dict = Depends(get_current_user)) -> str:
+CurrentUser = Depends(get_current_user)
+
+
+def ensure_admin_role(current_user: dict = CurrentUser) -> str:
     user_role = current_user.get("Role")
     user_id = current_user.get("ID")
 
     if user_role != "Admin" and user_id != ADMINID:
-        logger.error("هذا المسار مخصص للأدمن فقط! {}".format(user_id))
+        logger.error(f"هذا المسار مخصص للأدمن فقط! {user_id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="عفواً.. هذا المسار مخصص للأدمن فقط!",

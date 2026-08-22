@@ -1,13 +1,12 @@
-from typing import Union
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class InformationUser(BaseModel):
-    Age: Union[int, None]
-    Address: Union[str, None] = Field(min_length=16)
-    phone: Union[str, None] = Field(min_length=10, max_length=11)
-    Gender: Union[str, None]
+    Age: int | None
+    Address: str | None = Field(min_length=16)
+    phone: str | None = Field(min_length=10, max_length=11)
+    Gender: str | None
 
 
 class ChangePassword(BaseModel):
