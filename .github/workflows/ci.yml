@@ -22,7 +22,7 @@ jobs:
       API_PORT: 8000
 
       # Redis
-      REDIS_HOST: localhost
+      REDIS_HOST: redis
       REDIS_PORT: 6379
 
       # App Secret Key
