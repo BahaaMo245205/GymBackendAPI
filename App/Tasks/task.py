@@ -11,6 +11,8 @@ from jose import jwt
 from ..routes.auth.helper import create_reset_token
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 logger = logging.getLogger(__name__)
@@ -30,8 +32,8 @@ conf = ConnectionConfig(
 
 app_celery = Celery(
     "tasks",
-    broker=os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0"),
-    backend=os.getenv("CELERY_BACKEND_URL", "redis://redis:6379/0"),
+    broker=os.getenv("CELERY_BROKER_URL", f"redis://{REDIS_HOST}:6379/0"),
+    backend=os.getenv("CELERY_BACKEND_URL", f"redis://{REDIS_HOST}:6379/0"),
 )
 
 
@@ -51,21 +53,10 @@ def _send_email_sync(message: MessageSchema) -> None:
 def sent_email(
     email_user: str,
     massage: str,
-    status: list = [
-        "Unactiv",
-        "Active",
-        "Blocked",
-        "Deleted",
-        "Suspended",
-        "Banned",
-        "Pending",
-        "Rejected",
-        "Cancelled",
-        "Expired",
-        "Completed",
-        "Failed",
-    ],
+    status: list | None = None,
 ) -> None:
+    if status is None:
+        status = ["Unactiv", "Active", "Blocked", "Deleted", "Suspended", "Banned", "Pending", "Rejected", "Cancelled", "Expired", "Completed", "Failed"]
     try:
         message = MessageSchema(
             subject="Gym System - Welcome!",

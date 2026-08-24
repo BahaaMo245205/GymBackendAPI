@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import os
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from dotenv import load_dotenv
@@ -50,7 +50,7 @@ def validate_password(hashedPassword: str, password: str) -> bool:
 
 def create_reset_token(gmail: str | dict) -> str:
     """This functions for forgetting passwords"""
-    expire = datetime.now(timezone.utc) + timedelta(minutes=10)
+    expire = datetime.now(UTC) + timedelta(minutes=10)
     to_encode = {"exp": expire, "sub": gmail, "action": "reset_password"}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -74,11 +74,11 @@ def create_access_token(data: dict) -> str | None:
         return None
 
     access_payload = data.copy()
-    access_payload.update({"exp": datetime.now(timezone.utc) + timedelta(minutes=15)})
+    access_payload.update({"exp": datetime.now(UTC) + timedelta(minutes=15)})
     access_token = jwt.encode(access_payload, SECRET_KEY, algorithm=ALGORITHM)
 
     refresh_payload = data.copy()
-    refresh_payload.update({"exp": datetime.now(timezone.utc) + timedelta(days=7)})
+    refresh_payload.update({"exp": datetime.now(UTC) + timedelta(days=7)})
     refresh_token = jwt.encode(refresh_payload, SECRET_KEY, algorithm=ALGORITHM)
 
     return access_token, refresh_token

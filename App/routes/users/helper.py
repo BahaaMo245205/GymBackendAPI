@@ -29,10 +29,7 @@ def validate_password(hashedPassword: str, password: str) -> bool:
         raise HTTPException(501, "Error Chick password")
 
     hash_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    if hashedPassword == hash_password:
-        return True
-
-    return False
+    return hashedPassword == hash_password
 
 
 def retrieve_client_ip(request: Request) -> str:

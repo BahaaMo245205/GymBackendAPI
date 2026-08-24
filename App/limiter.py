@@ -1,12 +1,20 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+load_dotenv()
+
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+
 limiter = Limiter(
     key_func=get_remote_address,
-    storage_uri="redis://localhost:6379/0",
+    storage_uri=f"redis://{REDIS_HOST}:6379/0",
     default_limits=["100/minute"],
 )
 

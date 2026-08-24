@@ -1,33 +1,22 @@
-import pytest
 from fastapi.testclient import TestClient
+
 from App.app import app
 from App.routes.auth.helper import (
     create_access_token,
+    create_reset_token,
     generate_password_hash,
     validate_password,
-    create_reset_token,
     verify_reset_token,
 )
+import pytest
 
 client = TestClient(app)
 Name = "name"
 token = None
+jwt = None
 hash_password = None
 
-
-# ====================( Routes )====================
-# def test_login_success():
-#     response = client.post(
-#         "/v1/api/auth/login",
-#         json={"email": "bahaamo56179011@gmail.com", "password": "B@haa56179011"},
-#     )
-#     assert response.status_code == 200
-#     data = response.json()
-#     assert "access_token" in data
-#     print(data)
-
-
-# ====================( Routes )====================
+ROUTE_AUTH = "/v1/api/auth"
 
 
 # ====================( tools )====================
@@ -61,3 +50,34 @@ def test_verify_reset_token_validity():
 
 
 # ====================( tools )====================
+
+
+# ====================( Routes )====================
+def test_login_success():
+    global jwt
+    response = client.post(
+        "/v1/api/auth/login",
+        json={"email": "user@example.com", "password": "Strin&st1234"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    jwt = data["access_token"]
+    assert "access_token" in data
+    print(jwt)
+
+
+def test_validate_jwt_access():
+    headers = {"Authorization": f"Bearer {jwt}"}
+
+    response = client.get(ROUTE_AUTH + "/check", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["Info"]["Email"] == "user@example.com"
+
+
+def test_access_dashboard_without_token():
+    response = client.get(ROUTE_AUTH + "/check")
+    assert response.status_code == 401
+
+
+# ====================( Routes )====================

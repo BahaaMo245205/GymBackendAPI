@@ -223,7 +223,7 @@ async def stripe_webhook(
         else:
             meta = {}
             try:
-                for key in raw_meta.keys():
+                for key in raw_meta:
                     meta[key] = raw_meta[key]
             except Exception as e:
                 logger.error(f"metadata parse error: {e}")
@@ -331,7 +331,7 @@ async def get_session_status(
         else:
             meta = {}
             try:
-                for key in raw_meta.keys():
+                for key in raw_meta:
                     meta[str(key)] = raw_meta[key]
             except Exception:
                 meta = {}
