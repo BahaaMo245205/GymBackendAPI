@@ -234,11 +234,19 @@ async def google_callback(
     }
 
     async with httpx.AsyncClient() as client:
-        token_response = await client.post(token_url, data=token_data)
-        if token_response.status_code != 200:
-            logger.error("فشل التحقق من الكود مع جوجل: %s", token_response.text)
-            raise HTTPException(status_code=400, detail="فشل التحقق من الكود مع جوجل")
-
+        try:
+            token_response = await client.post(token_url, data=token_data)
+            if token_response.status_code != 200:
+                logger.error("فشل التحقق من الكود مع جوجل: %s", token_response.text)
+                raise HTTPException(
+                    status_code=400, detail="فشل التحقق من الكود مع جوجل"
+                )
+        except Exception as es:
+            logger.warning("Warning : {} ".format(es))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="{}".format(es),
+            )
         google_tokens = token_response.json()
         google_access_token = google_tokens.get("access_token")
 
@@ -282,9 +290,6 @@ async def google_callback(
             logger.error("خطأ أثناء تسجيل حساب جوجل: %s", e)
             raise HTTPException(status_code=500, detail="خطأ أثناء تسجيل حساب جوجل")
 
-    # else:
-    #     return RedirectResponse(url="http://localhost:5500/Frontend/email-exists.html", status_code=302)
-
     app_access_token, app_refresh_token = create_access_token(
         {
             "ID": db_user.UserID,
@@ -299,14 +304,14 @@ async def google_callback(
     logger.info("تم تسجيل الدخول بواسطة جوجل بنجاح: %s", email)
 
     redirect_url = (
-        f"http://localhost:3000/login.html"
+        f"http://localhost:5500/Frontend/login.html"
         f"?access_token={app_access_token}&refresh_token={app_refresh_token}"
     )
     return RedirectResponse(url=redirect_url)
 
 
 @auth_router.get("/check", status_code=status.HTTP_200_OK)
-async def read_users_me(current_user: dict =CurrentUser):
+async def read_users_me(current_user: dict = CurrentUser):
     return {
         "Info": current_user,
         "message": "Welcome to your profile!",

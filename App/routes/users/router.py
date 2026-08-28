@@ -54,7 +54,7 @@ CurrentUser = Depends(get_current_user)
 @router_user.get("/me")
 async def ProfileUser(
     current_user: dict = CurrentUser,
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     cache_key = f"user:profile:{user_id}"
@@ -117,7 +117,7 @@ async def ProfileUser(
 async def UpdateProfile(
     user_data: InformationUser,
     IdUser: dict = CurrentUser,
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
     await redis_client.delete(f"user:profile:{IdUser.get("ID")}")
     result = await session.execute(
@@ -156,7 +156,7 @@ async def UpdateProfile(
 async def ChangePasswords(
     passwords: ChangePassword,
     current_user: dict | str = CurrentUser,
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
     if passwords.NewPassword != passwords.ConfirmPassword:
         logger.warning("كلمات المرور غير متطابقة")
@@ -190,7 +190,7 @@ async def ChangePasswords(
 
 @router_user.get("/me/subscriptions", status_code=status.HTTP_200_OK)
 async def get_my_subscriptions(
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
     current_user_id: dict = CurrentUser,
 ):
     cashed_key = f"user:subscriptions:{current_user_id.get('ID')}"
@@ -238,7 +238,7 @@ async def get_my_subscriptions(
 @router_user.get("/me/bookings", status_code=status.HTTP_200_OK)
 async def get_my_bookings(
     current_user: dict = CurrentUser,
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
 
     user_id = current_user.get("ID") or current_user.get("UserID")
@@ -266,7 +266,7 @@ async def get_my_bookings(
         for booking, class_obj in rows:
             bookings_data.append(
                 {
-                    "BookingID": getattr(booking, "BookingID", None),
+                    "BookingID": getattr(booking, "BookingID"),
                     "ClassID": booking.ClassID,
                     "status": booking.Is_active,
                     "ClassName": class_obj.ClassName,
@@ -301,7 +301,7 @@ async def get_my_bookings(
 @router_user.post("/refresh")
 async def refresh_session(
     refresh_token: str = Body(..., embed=True),
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
     try:
         payload = jwt.decode(
@@ -435,10 +435,6 @@ async def upload_profile_image(
             "image_url": image_url,
             "filename": unique_filename,
         }
-
-    except HTTPException:
-        await session.rollback()
-        raise
     except Exception as e:
         logger.error(f"Error uploading image: {e}")
         await session.rollback()
@@ -448,7 +444,7 @@ async def upload_profile_image(
 @router_user.get("/is-active")
 async def is_active(
     current_user: dict = CurrentUser,
-    session: AsyncSession =DbSession,
+    session: AsyncSession = DbSession,
 ):
     user_id = current_user.get("ID") or current_user.get("UserID")
     if not user_id:

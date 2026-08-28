@@ -161,7 +161,7 @@ async def update_membership(
         raise HTTPException(status_code=500, detail="مشكلة في تحديث البيانات")
 
 
-@router_admin.delete("/memberships/{membership_id}", status_code=status.HTTP_200_OK)
+@router_admin.delete("/memberships/{membership_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_membership(
     membership_id: str,
     session: AsyncSession = DbSession,
@@ -547,7 +547,7 @@ async def update_class(
         )
 
 
-@router_admin.delete("/classes/{class_id}", status_code=status.HTTP_200_OK)
+@router_admin.delete("/classes/{class_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_class(
     class_id: str,
     session: AsyncSession = DbSession,

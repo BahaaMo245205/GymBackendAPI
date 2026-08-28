@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "mysql+aiomysql://root:Bahaa%2456179011@localhost:3306/systemgym"
+    "DATABASE_URL"
 )
 
 

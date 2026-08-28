@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5500")
 
 router_payment = APIRouter(prefix="/v1/api/payments", tags=["Payments"])
 
@@ -109,7 +109,7 @@ async def create_checkout_session(
         price = int(item.Price)
 
     amount = price * 100
-    frontend = os.getenv("FRONTEND_URL", "http://localhost:3000/Frontend")
+    frontend = os.getenv("FRONTEND_URL", "http://localhost:5500/Frontend")
 
     try:
         checkout = stripe.checkout.Session.create(

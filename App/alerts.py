@@ -21,10 +21,6 @@ EMAIL_REMINDER = """
 """
 
 
-async def _get_session() -> AsyncSession:
-    """جلسة يدوية — مش Depends"""
-    return async_session_maker()
-
 
 async def expire_subscriptions_job():
     logger.info("Job: expire subscriptions")

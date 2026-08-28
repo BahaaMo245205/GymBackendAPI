@@ -20,6 +20,8 @@ security_scheme = HTTPBearer()
 HttpSecurity = Depends(security_scheme)
 
 
+
+
 def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials = HttpSecurity,
