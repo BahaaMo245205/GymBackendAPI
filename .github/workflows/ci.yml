@@ -66,7 +66,7 @@ jobs:
       - name: "setup redis last version"
         uses: zhulik/redis-action@1.1.0
         with:
-          redis version: '5'
+          redis version: '7'
           number of databases: 100
 
       - name: Run Tests
