@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.requests import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import jwt
+from jose import jwt,JWTError
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -18,8 +18,6 @@ ADMINID = os.getenv("ADMINID")
 
 security_scheme = HTTPBearer()
 HttpSecurity = Depends(security_scheme)
-
-
 
 
 def get_current_user(
@@ -53,7 +51,12 @@ def get_current_user(
             "UserName": user_name,
             "Role": user_role,
         }
-
+    except JWTError as jwterorr:
+        logging.warning("Error JWT : {}".format(jwterorr))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error JWT: {}".format(jwterorr)
+        )
     except Exception as e:
         logger.error(f"{e}")
         raise HTTPException(
