@@ -81,7 +81,7 @@ jobs:
 
       # 3. تشغيل المايجريشنز عشان الجداول تتنشئ
       - name: Run Alembic Migrations
-        run: python -m alembic upgrade head
+        run: python -m alembic -c alembic.ini upgrade head
 
       # 4. تشغيل التيستات في النهاية
       - name: Run Tests
