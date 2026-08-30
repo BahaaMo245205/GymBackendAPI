@@ -8,6 +8,17 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # 1. تشغيل خدمة الـ MySQL سرفر في الخلفية عشان التيستات تشوفها
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: systemgym
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h localhost" --health-interval=10s --health-timeout=5s --health-retries=3
+
     env:
       # Database
       DATABASE_URL: mysql+aiomysql://root:${{ secrets.MYSQL_ROOT_PASSWORD }}@localhost:3306/systemgym
@@ -66,7 +77,7 @@ jobs:
       - name: "setup redis last version"
         uses: zhulik/redis-action@1.1.0
         with:
-          redis version: '7'
+          redis version: "7"
           number of databases: 100
 
       - name: Run Tests

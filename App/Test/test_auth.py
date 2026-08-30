@@ -57,7 +57,7 @@ def test_login_success():
     global jwt
     response = client.post(
         "/v1/api/auth/login",
-        json={"email": "user@example.com", "password": "Strin&st1234"},
+        json={"email": "user2@example.com", "password": "Strin&st0123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -72,7 +72,7 @@ def test_validate_jwt_access():
     response = client.get(ROUTE_AUTH + "/check", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    assert data["Info"]["Email"] == "user@example.com"
+    assert data["Info"]["Email"] == "user2@example.com"
 
 
 def test_access_dashboard_without_token():
