@@ -72,6 +72,9 @@ jobs:
           mysql database: 'systemgym'
           mysql root password: ${{ secrets.MYSQL_ROOT_PASSWORD }}
 
+      - name: Wait for MySQL
+        run: sleep 5
+
       # 2. تشغيل الـ Redis
       - name: Setup Redis
         uses: zhulik/redis-action@1.1.0
@@ -81,7 +84,7 @@ jobs:
 
       # 3. تشغيل المايجريشنز عشان الجداول تتنشئ
       - name: Run Alembic Migrations
-        run: python -m alembic upgrade head
+        run: python -m alembic -c alembic.ini upgrade head
 
       # 4. تشغيل التيستات في النهاية
       - name: Run Tests
