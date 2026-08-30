@@ -63,6 +63,8 @@ jobs:
     steps:
       - name: Run Migrations and Tests
         run: |
+          alembic init alembic
+          alembic revision --autogenerate -m "add users table"
           alembic upgrade head
           
       - name: Check out repository
