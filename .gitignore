@@ -13,7 +13,6 @@ Explain Codes/
 .env
 *.json
 *.md
-alembic.ini
 app.log
 *.jpg
 *.jpeg
