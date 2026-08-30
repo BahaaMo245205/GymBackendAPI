@@ -61,12 +61,6 @@ jobs:
       FRONTEND_URL: http://localhost:5500/Frontend
 
     steps:
-      - name: Run Migrations and Tests
-        run: |
-          alembic init alembic
-          alembic revision --autogenerate -m "add users table"
-          alembic upgrade head
-          
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -80,6 +74,10 @@ jobs:
         run: |
           python -m pip install -r requirements.txt
 
+      - name: Run Migrations and Tests
+        run: |
+          alembic upgrade head
+          
       - name: "setup redis last version"
         uses: zhulik/redis-action@1.1.0
         with:
