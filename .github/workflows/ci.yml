@@ -10,7 +10,7 @@ jobs:
 
     env:
       # Database
-      DATABASE_URL: mysql+aiomysql://root:${{ secrets.MYSQL_ROOT_PASSWORD }}@localhost:3306/systemgym
+      DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
       MYSQL_DATABASE: systemgym
       MYSQL_USER: root
