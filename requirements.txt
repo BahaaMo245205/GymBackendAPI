@@ -24,3 +24,4 @@ SQLAlchemy
 stripe
 uvicorn[standard]
 zxcvbn-python
+moto
