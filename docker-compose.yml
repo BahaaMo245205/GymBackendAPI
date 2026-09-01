@@ -46,7 +46,7 @@ services:
       - gym-net
 
   frontend:
-    image: frontgym
+    image: frontendgym
     container_name: gym-frontend
     ports:
       - "3000:80"
@@ -55,6 +55,21 @@ services:
     restart: always
     networks:
       - gym-net
+
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    container_name: gym-stripe-cli
+    command: >
+      listen
+      --api-key ${STRIPE_SECRET_KEY}
+      --forward-to http://api:8000/v1/api/payments/webhook
+    env_file:
+      - .env
+    depends_on:
+      - api
+    networks:
+      - gym-net
+    restart: unless-stopped
 
 networks:
   gym-net:

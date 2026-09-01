@@ -45,7 +45,7 @@ class Users(Base):
         "Classes", back_populates="trainer", cascade="all, delete-orphan"
     )
 
-    def __init__(self, username, email, password, role, profile_image=None):
+    def __init__(self, username, email, password, role, profile_image):
         self.UserName = username
         self.email = email
         self.password = password

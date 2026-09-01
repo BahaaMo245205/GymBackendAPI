@@ -2,3 +2,13 @@ __pycache__
 venv
 Markdown
 *.md
+.venv
+__pycache__
+*.pyc
+.env
+.git
+.pytest_cache
+app.log
+*.md
+App/Tests
+.github

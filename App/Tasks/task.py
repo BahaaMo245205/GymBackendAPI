@@ -96,7 +96,7 @@ def deliver_welcome_message(user_email: str) -> dict:
 def send_forgot_password_email(user_email: str) -> dict:
     try:
         token = create_reset_token(user_email)
-        frontend = os.getenv("FRONTEND_URL", "http://localhost:5500")
+        frontend = os.getenv("FRONTEND_URL", "http://localhost:3000")
         reset_link = f"{frontend}/reset-password.html?token={token}"
 
         message = MessageSchema(

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ...core.security import get_current_user
-from ...Database.db import Booking, Classes, get_async_session
+from ...Database.db import Booking, Classes, get_async_session, Users
 from ...redis import redis_client
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ classes_router = APIRouter(prefix="/v1/api/classes", tags=["Classes"])
 
 DbSession = Depends(get_async_session)
 CurrentUser = Depends(get_current_user)
+
 
 @classes_router.get("/", status_code=status.HTTP_200_OK)
 async def get_all_classes(session: AsyncSession = DbSession):
@@ -29,20 +30,13 @@ async def get_all_classes(session: AsyncSession = DbSession):
         }
 
     query = (
-        select(Classes)
+        select(Classes, Users)
+        .join(Users, Users.UserID == Classes.Trainer_id)
         .where(Classes.Is_active == True)
-        .options(selectinload(Classes.trainer))
     )
     result = await session.execute(query)
-    all_classes = result.scalars().all()
+    rows = result.all()
 
-    if not all_classes:
-        logger.warning("لا يوجد اي كلاسات متاحة حالياً في الجيم")
-        await redis_client.delete(cash_key)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="عفواً، لا توجد أي حصص تدريبية متاحة حالياً في الجيم.",
-        )
     get_all_class = [
         {
             "ClassesID": c.ClassesID,
@@ -52,14 +46,15 @@ async def get_all_classes(session: AsyncSession = DbSession):
             "Start_time": c.Start_time,
             "Price": c.Price,
             "Trainer_id": c.Trainer_id,
+            "TrainerName": u.UserName if u else None,
             "Is_active": c.Is_active,
             "TypeClass": c.TypeClass,
         }
-        for c in all_classes
+        for c, u in rows
     ]
     logger.info("جلب جميع الكلاسات بنجاح")
     await redis_client.set(cash_key, json.dumps(get_all_class), ex=3600)
-    return {"status": "success", "count": len(all_classes), "data": all_classes}
+    return {"status": "success", "count": len(get_all_class), "data": get_all_class}
 
 
 @classes_router.post("/{class_id}/booking", status_code=status.HTTP_201_CREATED)
