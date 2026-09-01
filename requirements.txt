@@ -9,11 +9,13 @@ fastapi[standard]
 gunicorn
 httpx
 imagekitio[aiohttp]
+moto
 passlib[bcrypt]
 pillow
 pydantic[email]
 pymysql
 pytest
+pytest_asyncio
 python-dotenv
 python-jose[cryptography]
 python-multipart
@@ -24,4 +26,3 @@ SQLAlchemy
 stripe
 uvicorn[standard]
 zxcvbn-python
-moto
