@@ -30,38 +30,25 @@ jobs:
           - 6379:6379
 
     env:
-      # نفس الباسورد في MySQL service
       DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
       TEST_DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: systemgym
-
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
-
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       ALGORITHM: HS256
-
       MAIL_USERNAME: test@example.com
       MAIL_PASSWORD: test
       MAIL_FROM: test@example.com
       MAIL_PORT: "587"
       MAIL_SERVER: localhost
-
-      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-
-      ADMINID: d1d81cf778e94c6fb0c2b82a7b503e45
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       FRONTEND_URL: http://localhost:3000
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
@@ -79,7 +66,6 @@ jobs:
               echo "MySQL ready"
               exit 0
             fi
-            echo "waiting $i"
             sleep 2
           done
           exit 1
@@ -87,16 +73,27 @@ jobs:
       - name: Run Tests
         run: python -m pytest App/Test -v
 
-      - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v2
+      # ----- Docker (اختياري) -----
+      - name: Create .env for Compose
+        run: |
+          cat > .env << EOF
+          DATABASE_URL=mysql+aiomysql://root:rootpassword@172.17.0.1:3306/systemgym
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          CELERY_BROKER_URL=redis://redis:6379/0
+          CELERY_BACKEND_URL=redis://redis:6379/0
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          ALGORITHM=HS256
+          MAIL_USERNAME=test@example.com
+          MAIL_PASSWORD=test
+          MAIL_FROM=test@example.com
+          MAIL_SERVER=localhost
+          MAIL_PORT=587
+          FRONTEND_URL=http://localhost:3000
+          EOF
 
-      - name: Touch .env
-        run: touch .env 
-
-      - name: login docker
-        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
-
-      - name: Build and run
+      - name: Docker Compose up
         run: |
           docker compose version
           docker compose up -d --build
+          docker compose ps
