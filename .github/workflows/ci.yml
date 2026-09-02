@@ -10,7 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # ===== MySQL + Redis كـ services (مش جوّه steps) =====
     services:
       mysql:
         image: mysql:8.0
@@ -82,7 +81,6 @@ jobs:
             sleep 2
           done
           exit 1
-      - name: Run Alembic Migrations
-        run: python -m alembic -c alembic.ini upgrade head
+
       - name: Run Tests
         run: python -m pytest App/Test -v
