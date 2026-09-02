@@ -83,6 +83,8 @@ jobs:
           CELERY_BROKER_URL=redis://redis:6379/0
           CELERY_BACKEND_URL=redis://redis:6379/0
           SECRET_KEY=${{ secrets.SECRET_KEY }}
+          STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY}}
+          STRIPE_WEBHOOK_SECRET=${{secrets.STRIPE_WEBHOOK_SECRET}}
           ALGORITHM=HS256
           MAIL_USERNAME=test@example.com
           MAIL_PASSWORD=test
