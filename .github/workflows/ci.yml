@@ -1,4 +1,4 @@
-name: System Gym
+name: System Gym CI
 
 on:
   push:
@@ -10,33 +10,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: rootpassword
-          MYSQL_DATABASE: systemgym
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prootpassword"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=30
-
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-
     env:
-      DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
-      TEST_DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: systemgym
-      REDIS_HOST: redis
+      DATABASE_URL: mysql+pymysql://root:rootpassword@127.0.0.1:3306/systemgym
+      REDIS_HOST: localhost
       REDIS_PORT: "6379"
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      SECRET_KEY: ci-test-secret-key-change-in-prod
       ALGORITHM: HS256
       MAIL_USERNAME: test@example.com
       MAIL_PASSWORD: test
@@ -57,12 +37,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pymysql cryptography aiomysql pytest pytest-asyncio httpx
+          pip install pymysql cryptography
+
+      - name: Setup MySQL
+        uses: mirromutth/mysql-action@v1.1
+        with:
+          mysql version: "8.0"
+          mysql database: "systemgym"
+          mysql root password: "rootpassword"
 
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -uroot -prootpassword --silent 2>/dev/null; then
+            if mysqladmin ping -h 127.0.0.1 -uroot -prootpassword --silent; then
               echo "MySQL ready"
               exit 0
             fi
@@ -70,6 +57,15 @@ jobs:
           done
           exit 1
 
-      - name: Run Tests
-        run: python -m pytest App/Test -v
+      - name: Setup Redis
+        uses: zhulik/redis-action@1.1.0
+        with:
+          redis version: "7"
 
+      - name: Alembic upgrade
+        run: python -m alembic -c alembic.ini upgrade head
+
+      - name: Pytest
+        run: python -m pytest -q
+        env:
+          DATABASE_URL: mysql+aiomysql://root:rootpassword@127.0.0.1:3306/systemgym
