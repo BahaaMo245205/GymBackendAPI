@@ -13,6 +13,7 @@ from sqlalchemy.pool import NullPool
 
 from App.app import app
 from App.Database.db import Base, get_async_session
+from App.routes.auth.helper import create_reset_token
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -31,10 +32,6 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
         await conn.run_sync(Base.metadata.create_all)
 
     yield engine
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -106,6 +103,21 @@ async def login_user(
     data = response.json()
     assert "access_token" in data
     return data["access_token"]
+
+
+async def forgot_password(client: AsyncClient, email):
+    response = await client.post("/v1/api/auth/forgot-password", json={"email": email})
+    return response
+
+
+async def reset_password(client: AsyncClient, NewPassword, ConfirmPassword):
+    token = create_reset_token("alias_ci@email.com")
+    response = await client.post(
+        "/v1/api/auth/reset-password?token={}".format(token),
+        json={"new_password": NewPassword, "confirm_password": ConfirmPassword},
+    )
+    return response
+
 
 
 def auth_header(token: str) -> dict[str, str]:

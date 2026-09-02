@@ -32,7 +32,7 @@ class Users(Base):
     email = Column(String(45), nullable=False, unique=True)
     password = Column(String(160), nullable=False)
     Role = Column(String(45), nullable=False, default="User")
-    profile_image = Column(String(255), nullable=True,default="default.jpg")
+    profile_image = Column(String(160), nullable=True,default="default.jpg")
     is_active = Column(Boolean, nullable=False, default=True)
 
     profile = relationship(

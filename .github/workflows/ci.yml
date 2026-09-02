@@ -82,5 +82,7 @@ jobs:
             sleep 2
           done
           exit 1
+      - name: Run Alembic Migrations
+        run: python -m alembic -c alembic.ini upgrade head
       - name: Run Tests
         run: python -m pytest App/Test -v
