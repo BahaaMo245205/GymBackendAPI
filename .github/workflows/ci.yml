@@ -10,7 +10,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # ===== MySQL + Redis كـ services (مش جوّه steps) =====
     services:
       mysql:
         image: mysql:8.0
@@ -87,3 +86,11 @@ jobs:
 
       - name: Run Tests
         run: python -m pytest App/Test -v
+
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v2
+
+      - name: Build and run
+        run: |
+          docker compose version
+          docker compose -f docker-compose.yml up -d --build
