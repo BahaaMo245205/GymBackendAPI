@@ -96,4 +96,5 @@ jobs:
       - name: Build and run
         run: |
           docker compose version
+          docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
           docker compose up -d --build
