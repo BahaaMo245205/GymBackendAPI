@@ -73,29 +73,3 @@ jobs:
       - name: Run Tests
         run: python -m pytest App/Test -v
 
-      # ----- Docker (اختياري) -----
-      - name: Create .env for Compose
-        run: |
-          cat > .env << EOF
-          DATABASE_URL=mysql+aiomysql://root:rootpassword@172.17.0.1:3306/systemgym
-          REDIS_HOST=redis
-          REDIS_PORT=6379
-          CELERY_BROKER_URL=redis://redis:6379/0
-          CELERY_BACKEND_URL=redis://redis:6379/0
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY}}
-          STRIPE_WEBHOOK_SECRET=${{secrets.STRIPE_WEBHOOK_SECRET}}
-          ALGORITHM=HS256
-          MAIL_USERNAME=test@example.com
-          MAIL_PASSWORD=test
-          MAIL_FROM=test@example.com
-          MAIL_SERVER=localhost
-          MAIL_PORT=587
-          FRONTEND_URL=http://localhost:3000
-          EOF
-
-      - name: Docker Compose up
-        run: |
-          docker compose version
-          docker compose up -d --build
-          docker compose ps
