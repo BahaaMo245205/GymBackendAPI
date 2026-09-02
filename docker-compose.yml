@@ -47,7 +47,7 @@ services:
       - gym-net
 
   frontend:
-    build: .\Frontend\
+    build: ./Frontend
     image: frontendgym
     container_name: gym-frontend
     ports:
