@@ -93,8 +93,10 @@ jobs:
       - name: Touch .env
         run: touch .env 
 
+      - name: login docker
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+
       - name: Build and run
         run: |
           docker compose version
-          docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
           docker compose up -d --build
