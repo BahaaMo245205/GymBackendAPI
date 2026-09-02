@@ -92,8 +92,8 @@ jobs:
 
       - name: Touch .env
         run: touch .env 
-         
+
       - name: Build and run
         run: |
           docker compose version
-          docker compose -f docker-compose.yml up -d --build
+          docker compose up -d --build
