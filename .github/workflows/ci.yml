@@ -90,6 +90,9 @@ jobs:
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v2
 
+      - name: Touch .env
+        run: touch .env 
+         
       - name: Build and run
         run: |
           docker compose version
