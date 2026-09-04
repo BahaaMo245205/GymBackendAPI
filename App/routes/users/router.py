@@ -47,6 +47,8 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
 
+
+profile_image_file = File(...)
 DbSession = Depends(get_async_session)
 CurrentUser = Depends(get_current_user)
 
@@ -266,7 +268,7 @@ async def get_my_bookings(
         for booking, class_obj in rows:
             bookings_data.append(
                 {
-                    "BookingID": getattr(booking, "BookingID"),
+                    "BookingID": booking.BookingID,
                     "ClassID": booking.ClassID,
                     "status": booking.Is_active,
                     "ClassName": class_obj.ClassName,
@@ -365,7 +367,7 @@ async def refresh_session(
 
 @router_user.post("/upload-profile-image")
 async def upload_profile_image(
-    file: UploadFile = File(...),
+    file: UploadFile =profile_image_file ,
     current_user: dict = CurrentUser,
     session: AsyncSession = DbSession,
 ):

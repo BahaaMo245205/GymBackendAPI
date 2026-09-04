@@ -242,10 +242,10 @@ async def google_callback(
                     status_code=400, detail="فشل التحقق من الكود مع جوجل"
                 )
         except Exception as es:
-            logger.warning("Warning : {} ".format(es))
+            logger.warning(f"Warning : {es} ")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="{}".format(es),
+                detail=f"{es}",
             )
         google_tokens = token_response.json()
         google_access_token = google_tokens.get("access_token")

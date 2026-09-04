@@ -113,7 +113,7 @@ async def forgot_password(client: AsyncClient, email):
 async def reset_password(client: AsyncClient, NewPassword, ConfirmPassword):
     token = create_reset_token("alias_ci@email.com")
     response = await client.post(
-        "/v1/api/auth/reset-password?token={}".format(token),
+        f"/v1/api/auth/reset-password?token={token}",
         json={"new_password": NewPassword, "confirm_password": ConfirmPassword},
     )
     return response

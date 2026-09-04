@@ -7,6 +7,7 @@ wheels/
 *.egg-info
 MarkDown/
 Explain Codes/
+.pytest_cache
 
 # Virtual environments
 .venv

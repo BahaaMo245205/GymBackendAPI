@@ -5,10 +5,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...core.security import get_current_user
-from ...Database.db import Booking, Classes, get_async_session, Users
+from ...Database.db import Booking, Classes, Users, get_async_session
 from ...redis import redis_client
 
 logger = logging.getLogger(__name__)
@@ -169,7 +168,8 @@ async def cancel_class_booking(
         try:
             await redis_client.delete(f"user:bookings:{user_id}")
         except Exception:
-            pass
+            logging.exception("Exception occurred")
+
 
         return {
             "status": "success",

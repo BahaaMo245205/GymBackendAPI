@@ -1,18 +1,17 @@
 import pytest
 
-from App.Test.conftest import (
-    auth_header,
-    create_test_user,
-    login_user,
-    forgot_password,
-    reset_password,
-)
 from App.routes.auth.helper import (
     create_access_token,
     create_reset_token,
     generate_password_hash,
     validate_password,
     verify_reset_token,
+)
+from App.Test.conftest import (
+    create_test_user,
+    forgot_password,
+    login_user,
+    reset_password,
 )
 
 Name = "name"
